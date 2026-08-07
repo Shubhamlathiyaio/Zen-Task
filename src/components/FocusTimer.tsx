@@ -1,49 +1,39 @@
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Play, Pause, RotateCcw, Volume2, Coffee, Brain } from 'lucide-react';
-
-const TIMER_DURATIONS = {
-  work: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60
-};
+import { Play, Pause, RotateCcw, Volume2, Coffee, Brain, SkipForward, Timer } from 'lucide-react';
 
 export default function FocusTimer() {
   const { 
     timerMode, setTimerMode, 
     timerTimeLeft, setTimerTimeLeft, 
     timerIsRunning, setTimerIsRunning,
-    tickTimer,
+    timerSettings, setTimerSettings,
     soundscapes, activeSoundscape, setActiveSoundscape
   } = useStore();
-  
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (timerIsRunning) {
-      timerRef.current = setInterval(() => {
-        tickTimer();
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [timerIsRunning, tickTimer]);
+  const getTimerDuration = (mode: 'work' | 'shortBreak' | 'longBreak') => {
+    return timerSettings[mode] * 60;
+  };
 
   const toggleTimer = () => setTimerIsRunning(!timerIsRunning);
 
   const resetTimer = () => {
     setTimerIsRunning(false);
-    setTimerTimeLeft(TIMER_DURATIONS[timerMode]);
+    setTimerTimeLeft(getTimerDuration(timerMode));
   };
 
   const handleModeChange = (mode: 'work' | 'shortBreak' | 'longBreak') => {
     setTimerMode(mode);
     setTimerIsRunning(false);
-    setTimerTimeLeft(TIMER_DURATIONS[mode]);
+    setTimerTimeLeft(getTimerDuration(mode));
+  };
+
+  const handleSkip = () => {
+    if (timerMode === 'work') {
+      handleModeChange('shortBreak');
+    } else {
+      handleModeChange('work');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -51,6 +41,9 @@ export default function FocusTimer() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Full circumference of the circle (r=45%)
+  const C = 2 * Math.PI * 45;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
@@ -83,23 +76,23 @@ export default function FocusTimer() {
         </div>
 
         <div className="relative">
-          <svg className="w-64 h-64 md:w-80 md:h-80 transform -rotate-90">
+          <svg className="w-64 h-64 md:w-80 md:h-80 transform -rotate-90" viewBox="0 0 100 100">
             <circle
-              cx="50%"
-              cy="50%"
-              r="45%"
-              className="fill-none stroke-(--color-neutral) stroke-[8]"
+              cx="50"
+              cy="50"
+              r="45"
+              className="fill-none stroke-(--color-neutral) stroke-[6]"
             />
             <circle
-              cx="50%"
-              cy="50%"
-              r="45%"
-              className={`fill-none stroke-[8] stroke-current transition-all duration-1000 ${
+              cx="50"
+              cy="50"
+              r="45"
+              className={`fill-none stroke-[6] stroke-current transition-all duration-1000 ${
                 timerMode === 'work' ? 'text-(--color-primary)' : 
                 timerMode === 'shortBreak' ? 'text-blue-500' : 'text-green-500'
               }`}
-              strokeDasharray={`${2 * Math.PI * 45 * (timerMode === 'work' ? 1.6 : 2)}`}
-              strokeDashoffset={`${2 * Math.PI * 45 * (timerMode === 'work' ? 1.6 : 2) * (1 - timerTimeLeft / TIMER_DURATIONS[timerMode])}`}
+              strokeDasharray={`${C}`}
+              strokeDashoffset={`${C * (timerTimeLeft / getTimerDuration(timerMode))}`}
               strokeLinecap="round"
             />
           </svg>
@@ -116,21 +109,31 @@ export default function FocusTimer() {
 
         <div className="flex gap-6 mt-10">
           <button
+            onClick={resetTimer}
+            className="w-16 h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
+            title="Reset timer"
+          >
+            <RotateCcw className="w-6 h-6" />
+          </button>
+
+          <button
             onClick={toggleTimer}
             className={`w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 border-none ${
               timerIsRunning 
                 ? 'bg-(--color-surface-2) text-(--color-on-surface) hover:bg-white/10' 
                 : 'bg-(--color-primary) text-white hover:bg-(--color-primary-80)'
             }`}
+            title={timerIsRunning ? 'Pause' : 'Start'}
           >
             {timerIsRunning ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
           </button>
           
           <button
-            onClick={resetTimer}
+            onClick={handleSkip}
             className="w-16 h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
+            title="Skip to next phase"
           >
-            <RotateCcw className="w-6 h-6" />
+            <SkipForward className="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -155,7 +158,7 @@ export default function FocusTimer() {
             >
               <span className="font-bold">{sound.name}</span>
               {!sound.unlocked && (
-                <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-md">
+                <span className="text-xs bg-(--color-reward)/20 text-(--color-reward) px-2 py-1 rounded-md">
                   {sound.cost} coins
                 </span>
               )}
@@ -168,6 +171,101 @@ export default function FocusTimer() {
               )}
             </button>
           ))}
+        </div>
+      </div>
+      {/* Timer Settings Section */}
+      <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-md">
+        <h3 className="text-lg font-bold text-(--color-on-surface) mb-4 flex items-center gap-2">
+          <Timer className="text-(--color-primary-60) w-5 h-5" /> Timer Configuration
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-4">
+            <h4 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-2">Durations</h4>
+            
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 font-bold text-(--color-on-surface)">
+                  <Brain className="text-red-500 w-4 h-4" /> Focus
+                </div>
+                <span className="text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded text-sm">{timerSettings.work} min</span>
+              </div>
+              <input 
+                type="range" min="5" max="60" step="1"
+                value={timerSettings.work}
+                onChange={(e) => setTimerSettings({ work: parseInt(e.target.value) })}
+                disabled={timerIsRunning}
+                style={{ '--slider-color': '#ef4444' } as React.CSSProperties}
+                className={`w-full custom-slider ${timerIsRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+            </div>
+
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 font-bold text-(--color-on-surface)">
+                  <Coffee className="text-blue-500 w-4 h-4" /> Short Break
+                </div>
+                <span className="text-blue-500 font-bold bg-blue-500/10 px-2 py-0.5 rounded text-sm">{timerSettings.shortBreak} min</span>
+              </div>
+              <input 
+                type="range" min="1" max="15" step="1"
+                value={timerSettings.shortBreak}
+                onChange={(e) => setTimerSettings({ shortBreak: parseInt(e.target.value) })}
+                disabled={timerIsRunning}
+                style={{ '--slider-color': '#3b82f6' } as React.CSSProperties}
+                className={`w-full custom-slider ${timerIsRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+            </div>
+
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 font-bold text-(--color-on-surface)">
+                  <Coffee className="text-green-500 w-4 h-4" /> Long Break
+                </div>
+                <span className="text-green-500 font-bold bg-green-500/10 px-2 py-0.5 rounded text-sm">{timerSettings.longBreak} min</span>
+              </div>
+              <input 
+                type="range" min="5" max="30" step="1"
+                value={timerSettings.longBreak}
+                onChange={(e) => setTimerSettings({ longBreak: parseInt(e.target.value) })}
+                disabled={timerIsRunning}
+                style={{ '--slider-color': '#22c55e' } as React.CSSProperties}
+                className={`w-full custom-slider ${timerIsRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h4 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-2">Behaviour</h4>
+            
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <div className="font-bold text-(--color-on-surface) text-sm">Cycles before long break</div>
+                </div>
+                <span className="text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded text-sm">{timerSettings.cyclesBeforeLongBreak}</span>
+              </div>
+              <input 
+                type="range" min="1" max="10" step="1"
+                value={timerSettings.cyclesBeforeLongBreak}
+                onChange={(e) => setTimerSettings({ cyclesBeforeLongBreak: parseInt(e.target.value) })}
+                style={{ '--slider-color': '#ef4444' } as React.CSSProperties}
+                className="w-full custom-slider"
+              />
+            </div>
+
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex justify-between items-center gap-4">
+              <div className="flex flex-col">
+                <div className="font-bold text-(--color-on-surface) text-sm">Auto-start next timer</div>
+              </div>
+              <button 
+                onClick={() => setTimerSettings({ autoStart: !timerSettings.autoStart })}
+                className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer border-none shrink-0 ${timerSettings.autoStart ? 'bg-red-500' : 'bg-(--color-surface-2)'}`}
+              >
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${timerSettings.autoStart ? 'translate-x-5' : 'translate-x-1'}`}></div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

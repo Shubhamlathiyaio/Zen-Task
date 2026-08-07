@@ -117,7 +117,7 @@ export default function LeisureInventory() {
               className="mt-2 bg-(--color-surface-2) text-(--color-on-surface) border border-(--color-primary-60) hover:bg-(--color-primary-60) transition-colors rounded-sm h-10 flex items-center justify-between px-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span>Purchase</span>
-              <span className="text-yellow-400 font-mono">-{totalCost} coins</span>
+              <span className="text-(--color-reward) font-mono">-{totalCost} coins</span>
             </button>
           </form>
         </div>

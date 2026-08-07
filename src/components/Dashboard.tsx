@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import Auth from './Auth';
 import ActionHub from './ActionHub';
@@ -8,18 +8,33 @@ import FocusTimer from './FocusTimer';
 import StoreView from './StoreView';
 import PartyView from './PartyView';
 import SettingsView from './SettingsView';
+import ProfileView from './ProfileView';
 import ActivityTiles from './ActivityTiles';
-import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User } from 'lucide-react';
+import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
 
 export default function Dashboard() {
-  const { user, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme } = useStore();
+  const { user, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed } = useStore();
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  }, [theme]); // Also updating this to react to theme changes
+
+  useEffect(() => {
+    if (timerIsRunning) {
+      timerRef.current = setInterval(() => {
+        decrementTimer();
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timerIsRunning, decrementTimer]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -35,7 +50,7 @@ export default function Dashboard() {
       onClick={() => setCurrentView(view)}
       className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 p-2 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
         currentView === view 
-          ? 'bg-(--color-primary) text-(--color-on-surface) shadow-md shadow-(--color-primary)/20' 
+          ? 'bg-(--color-primary) text-white shadow-md shadow-(--color-primary)/20' 
           : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'
       }`}
     >
@@ -66,7 +81,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen pb-20 md:pb-0 relative">
+      <main className="flex-1 md:ml-64 flex flex-col min-h-screen pb-32 md:pb-24 relative">
         
         {/* Top Header */}
         <header className="sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md p-4 md:px-8 border-b border-(--color-border) flex justify-between items-center">
@@ -74,17 +89,27 @@ export default function Dashboard() {
             {currentView === 'tasks' ? 'Quests Dashboard' : currentView}
           </h2>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-(--color-surface) px-4 py-2 rounded-full border border-(--color-border) shadow-sm">
-              <Coins className="text-yellow-400 w-5 h-5" />
-              <span className="font-bold text-yellow-400 text-lg font-mono">{coinBalance}</span>
+          <div className="flex items-center gap-3 md:gap-4">
+            <button
+              onClick={() => {
+                const newTheme = theme === 'habitica-dark' ? 'classic-light' : 'habitica-dark';
+                setTheme(newTheme);
+                document.documentElement.setAttribute('data-theme', newTheme);
+              }}
+              className="w-10 h-10 rounded-full bg-(--color-surface-2) border border-(--color-border) flex items-center justify-center text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
+            >
+              {theme === 'habitica-dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-purple-500" />}
+            </button>
+            <div className="flex items-center gap-2 md:gap-4 bg-(--color-surface-2) py-2 px-3 md:px-4 rounded-xl border border-(--color-border)">
+              <Coins className="text-(--color-reward) w-5 h-5" />
+              <span className="font-bold text-(--color-reward) text-lg font-mono">{coinBalance}</span>
             </div>
             
             <button 
-              onClick={() => setCurrentView('settings')}
-              className="w-10 h-10 rounded-full bg-(--color-surface) border border-(--color-border) flex items-center justify-center text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
+              onClick={() => setCurrentView('profile')}
+              className="w-10 h-10 rounded-full bg-(--color-surface) border-2 border-(--color-primary-60) flex items-center justify-center text-(--color-muted-text) hover:border-white transition-all cursor-pointer overflow-hidden shrink-0"
             >
-              <User className="w-5 h-5" />
+              <img src={`https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${avatarSeed || user?.id || 'default'}`} alt="Avatar" className="w-full h-full object-cover" />
             </button>
           </div>
         </header>
@@ -128,6 +153,7 @@ export default function Dashboard() {
               {currentView === 'timer' && <FocusTimer />}
               {currentView === 'store' && <StoreView />}
               {currentView === 'party' && <PartyView />}
+              {currentView === 'profile' && <ProfileView />}
               {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
             </motion.div>
           </AnimatePresence>
@@ -140,6 +166,7 @@ export default function Dashboard() {
         <NavItem view="timer" icon={Timer} label="Focus" />
         <NavItem view="store" icon={ShoppingBag} label="Store" />
         <NavItem view="party" icon={Users} label="Party" />
+        <NavItem view="settings" icon={Settings} label="Settings" />
       </div>
 
       <ActionHub />

@@ -7,6 +7,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -42,7 +43,7 @@ export default function Auth() {
         if (data.user) {
           await supabase.from('profiles').insert({
             id: data.user.id,
-            username: email.split('@')[0],
+            username: username.trim() || email.split('@')[0],
             coin_balance: 100 // Starting bonus
           }).select().single();
         }
@@ -69,6 +70,17 @@ export default function Auth() {
         </div>
         
         <form onSubmit={handleAuth} className="flex flex-col gap-5">
+          {!isLogin && (
+            <input
+              type="text"
+              placeholder="Choose a Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required={!isLogin}
+              className="bg-(--color-neutral) text-(--color-on-surface) h-12 px-4 rounded-md border border-(--color-border) focus:outline-none focus:border-(--color-primary-60) transition-colors"
+            />
+          )}
+
           <input
             type="email"
             placeholder="Email Address"

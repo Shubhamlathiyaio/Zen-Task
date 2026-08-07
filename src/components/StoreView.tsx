@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { ShoppingBag, Plus, Trash2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 const PREDEFINED_ICONS = ['🎮', '🎬', '🍿', '📚', '☕', '🍰', '🚶', '🛌'];
 
@@ -32,11 +33,11 @@ export default function StoreView() {
     }
   };
 
-  const handlePurchase = async (rewardId: string, rewardCost: number, rewardTitle: string) => {
+  const handlePurchase = async (rewardId: string, rewardCost: number, rewardTitle: string, e: React.MouseEvent) => {
     if (!user) return;
     
     if (coinBalance < rewardCost) {
-      alert("Not enough coins to purchase this reward.");
+      // Small visual feedback instead of alert? Or just a toast, but we don't have a toast library. Let's just do nothing or a simple console log
       return;
     }
     
@@ -44,17 +45,31 @@ export default function StoreView() {
     
     // Update local state and DB concurrently
     setCoinBalance(newBalance);
-    await supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id);
+    supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
     
     // Record transaction
-    await supabase.from('transactions').insert({
+    supabase.from('transactions').insert({
       user_id: user.id,
       amount: -rewardCost,
       type: 'purchase',
       description: `Purchased: ${rewardTitle}`
-    });
+    }).then();
     
-    alert(`Successfully purchased: ${rewardTitle}! Enjoy!`);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+    
+    confetti({
+      particleCount: 150,
+      spread: 80,
+      origin: { x, y },
+      colors: ['#FACC15', '#F59E0B', '#D97706'],
+      disableForReducedMotion: true
+    });
+
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+    audio.volume = 0.5;
+    audio.play().catch(console.error);
   };
 
   return (
@@ -62,10 +77,10 @@ export default function StoreView() {
       
       {/* Create New Reward Section */}
       <div className="bg-(--color-surface) rounded-2xl p-6 md:p-8 border border-(--color-border) shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -z-10"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-(--color-reward)/10 rounded-full blur-[80px] -z-10"></div>
         
         <h2 className="text-2xl font-normal mb-6 text-(--color-on-surface) flex items-center gap-2" style={{ fontFamily: 'var(--font-varela)' }}>
-          <Plus className="text-yellow-400" /> Create Custom Reward
+          <Plus className="text-(--color-reward)" /> Create Custom Reward
         </h2>
         
         <form onSubmit={handleAddReward} className="flex flex-col md:flex-row gap-4 items-end">
@@ -77,7 +92,7 @@ export default function StoreView() {
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
-              className="w-full bg-(--color-neutral) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-yellow-400"
+              className="w-full bg-(--color-neutral) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-reward)"
             />
           </div>
           
@@ -89,7 +104,7 @@ export default function StoreView() {
               value={cost}
               onChange={e => setCost(Number(e.target.value))}
               required
-              className="w-full bg-(--color-neutral) text-yellow-400 font-bold h-12 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-yellow-400"
+              className="w-full bg-(--color-neutral) text-(--color-reward) font-bold h-12 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-reward)"
             />
           </div>
           
@@ -98,7 +113,7 @@ export default function StoreView() {
             <select 
               value={icon}
               onChange={e => setIcon(e.target.value)}
-              className="w-full md:w-24 bg-(--color-neutral) text-(--color-on-surface) text-xl h-12 px-2 rounded-lg border border-(--color-border) focus:outline-none focus:border-yellow-400 appearance-none text-center cursor-pointer"
+              className="w-full md:w-24 bg-(--color-neutral) text-(--color-on-surface) text-xl h-12 px-2 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-reward) appearance-none text-center cursor-pointer"
             >
               {PREDEFINED_ICONS.map(i => <option key={i} value={i}>{i}</option>)}
             </select>
@@ -106,7 +121,7 @@ export default function StoreView() {
           
           <button 
             type="submit" 
-            className="w-full md:w-auto bg-(--color-surface-2) border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400 hover:text-black transition-colors rounded-lg h-12 px-6 font-bold cursor-pointer"
+            className="w-full md:w-auto bg-(--color-surface-2) border border-(--color-reward)/30 text-(--color-reward) hover:bg-(--color-reward) hover:text-black transition-colors rounded-lg h-12 px-6 font-bold cursor-pointer"
           >
             Add
           </button>
@@ -126,7 +141,7 @@ export default function StoreView() {
             </p>
           ) : (
             rewards.map(reward => (
-              <div key={reward.id} className="bg-white/5 border border-(--color-border) p-5 rounded-xl flex flex-col items-center text-center gap-4 hover:border-yellow-400/50 transition-colors group">
+              <div key={reward.id} className="bg-white/5 border border-(--color-border) p-5 rounded-xl flex flex-col items-center text-center gap-4 hover:border-(--color-reward)/50 transition-colors group">
                 <div className="text-4xl bg-(--color-neutral) w-16 h-16 rounded-full flex items-center justify-center border border-(--color-border) shadow-md">
                   {reward.icon}
                 </div>
@@ -136,9 +151,9 @@ export default function StoreView() {
                 </h3>
                 
                 <button 
-                  onClick={() => handlePurchase(reward.id, reward.cost, reward.title)}
+                  onClick={(e) => handlePurchase(reward.id, reward.cost, reward.title, e)}
                   disabled={coinBalance < reward.cost}
-                  className="w-full bg-(--color-surface-2) border border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/20 transition-colors rounded-lg py-3 font-bold disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex justify-center items-center gap-2"
+                  className="w-full bg-(--color-surface-2) border border-(--color-reward)/20 text-(--color-reward) hover:bg-(--color-reward)/20 transition-colors rounded-lg py-3 font-bold disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex justify-center items-center gap-2"
                 >
                   Buy for {reward.cost} coins
                 </button>

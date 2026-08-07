@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Settings, LogOut, User, Moon, Sun, Palette } from 'lucide-react';
+import { Settings, LogOut, User, Moon, Sun, Palette, Timer, Brain, Coffee, Tag, Plus, Trash2, LayoutGrid, List } from 'lucide-react';
 
 export default function SettingsView({ onLogout }: { onLogout: () => void }) {
-  const { user, theme, setTheme } = useStore();
+  const { user, theme, setTheme, timerSettings, setTimerSettings, timerIsRunning, customTags, setCustomTagColor, deleteCustomTag, taskViewMode, setTaskViewMode, avatarStyle, avatarSeed } = useStore();
+  
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#FACC15');
 
   const handleThemeChange = (newTheme: 'habitica-dark' | 'classic-light') => {
     setTheme(newTheme);
@@ -25,8 +28,8 @@ export default function SettingsView({ onLogout }: { onLogout: () => void }) {
             </h3>
             <div className="flex items-center justify-between p-4 bg-(--color-neutral) rounded-xl border border-(--color-border)">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-(--color-surface-2) flex items-center justify-center text-xl font-bold text-(--color-primary-60) border border-(--color-border)">
-                  <User className="w-6 h-6" />
+                <div className="w-16 h-16 rounded-full bg-(--color-surface-2) flex items-center justify-center border-2 border-(--color-primary-60) overflow-hidden shrink-0">
+                  <img src={`https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${avatarSeed || user?.id || 'default'}`} alt="Avatar" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <p className="font-bold text-(--color-on-surface)">{user?.email}</p>
@@ -36,11 +39,100 @@ export default function SettingsView({ onLogout }: { onLogout: () => void }) {
             </div>
           </section>
 
+          {/* Tags Section */}
+          <section>
+            <h3 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-4 border-b border-(--color-border) pb-2 flex items-center gap-2">
+              <Tag className="w-4 h-4" /> Tags
+            </h3>
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="New tag name"
+                  value={newTagName}
+                  onChange={e => setNewTagName(e.target.value)}
+                  className="flex-1 bg-(--color-surface) text-(--color-on-surface) h-10 px-3 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-primary-60) text-sm"
+                />
+                <button
+                  onClick={() => {
+                    if (newTagName.trim()) {
+                      setCustomTagColor(newTagName.trim(), newTagColor);
+                      setNewTagName('');
+                    }
+                  }}
+                  disabled={!newTagName.trim()}
+                  className="bg-(--color-primary) text-white h-10 px-4 rounded-lg font-bold flex items-center justify-center disabled:opacity-50 border-none cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#A855F7', '#EC4899', '#64748B'].map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setNewTagColor(color)}
+                    className={`w-6 h-6 rounded-full cursor-pointer transition-transform border-none ${newTagColor === color ? 'scale-125 ring-2 ring-offset-2 ring-(--color-primary-60)' : 'hover:scale-110'}`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              {Object.keys(customTags).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {Object.entries(customTags).map(([tag, color]) => (
+                    <div key={tag} className="flex items-center gap-1 bg-(--color-surface) border border-(--color-border) pr-1 pl-3 py-1 rounded-full">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
+                      <span className="text-xs font-bold text-(--color-on-surface)">{tag}</span>
+                      <button 
+                        onClick={() => deleteCustomTag(tag)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-(--color-muted-text) hover:text-red-500 hover:bg-red-500/10 cursor-pointer border-none transition-colors ml-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+
+
           {/* Theme Section */}
           <section>
             <h3 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-4 border-b border-(--color-border) pb-2 flex items-center gap-2">
               <Palette className="w-4 h-4" /> Appearance
             </h3>
+            
+            <div className="mb-6 flex flex-col gap-4">
+              <div className="font-bold text-(--color-on-surface) mb-2">Default Task View</div>
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setTaskViewMode('matrix')}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                    taskViewMode === 'matrix' 
+                      ? 'bg-(--color-primary)/20 border-(--color-primary-60) text-(--color-on-surface)' 
+                      : 'bg-(--color-neutral) border-(--color-border) text-(--color-muted-text) hover:border-(--color-primary-60)/50'
+                  }`}
+                >
+                  <LayoutGrid className="w-5 h-5" />
+                  <span className="font-bold">Matrix (2x2)</span>
+                </button>
+                <button 
+                  onClick={() => setTaskViewMode('list')}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                    taskViewMode === 'list' 
+                      ? 'bg-(--color-primary)/20 border-(--color-primary-60) text-(--color-on-surface)' 
+                      : 'bg-(--color-neutral) border-(--color-border) text-(--color-muted-text) hover:border-(--color-primary-60)/50'
+                  }`}
+                >
+                  <List className="w-5 h-5" />
+                  <span className="font-bold">Combined List</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="font-bold text-(--color-on-surface) mb-2 mt-4">Theme</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               <button 
