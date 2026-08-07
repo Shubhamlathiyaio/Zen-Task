@@ -5,7 +5,11 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://shubhamlathiyaio.github.io',
+  base: '/Zen-Task',
+
   integrations: [react()],
+
   vite: {
     plugins: [tailwindcss()]
   }
