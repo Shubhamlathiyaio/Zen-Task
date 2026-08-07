@@ -15,7 +15,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Dashboard() {
-  const { user, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed } = useStore();
+  const { user, isGuest, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed } = useStore();
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -37,11 +37,13 @@ export default function Dashboard() {
   }, [timerIsRunning, decrementTimer]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    useStore.setState({ user: null });
+    if (user) {
+      await supabase.auth.signOut();
+    }
+    useStore.setState({ user: null, isGuest: false });
   };
 
-  if (!user) {
+  if (!user && !isGuest) {
     return <Auth />;
   }
 
@@ -60,7 +62,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-(--color-neutral) text-(--color-on-surface) relative">
+    <div className="h-screen flex flex-col md:flex-row bg-(--color-neutral) text-(--color-on-surface) overflow-hidden relative">
       
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-(--color-surface) border-r border-(--color-border) z-20 shadow-2xl">
@@ -81,7 +83,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen pb-32 md:pb-24 relative">
+      <main className="flex-1 md:ml-64 flex flex-col h-full relative">
         
         {/* Top Header */}
         <header className="sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md p-4 md:px-8 border-b border-(--color-border) flex justify-between items-center">
@@ -115,7 +117,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-x-hidden">
+        <div className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar pb-32 md:pb-32">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -123,7 +125,7 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="w-full h-full"
+              className="w-full min-h-full flex flex-col"
             >
               {currentView === 'tasks' && (
                 <div className="flex flex-col gap-8">
@@ -134,13 +136,13 @@ export default function Dashboard() {
                     <div className="bg-(--color-surface) p-1 rounded-lg flex border border-(--color-border)">
                       <button 
                         onClick={() => setTaskViewMode('matrix')}
-                        className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer transition-colors ${taskViewMode === 'matrix' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-white'}`}
+                        className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer outline-none focus:outline-none transition-colors ${taskViewMode === 'matrix' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
                       >
                         Matrix
                       </button>
                       <button 
                         onClick={() => setTaskViewMode('list')}
-                        className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer transition-colors ${taskViewMode === 'list' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-white'}`}
+                        className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer outline-none focus:outline-none transition-colors ${taskViewMode === 'list' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
                       >
                         List
                       </button>
@@ -157,6 +159,8 @@ export default function Dashboard() {
               {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
             </motion.div>
           </AnimatePresence>
+          {/* Spacer to ensure the user can scroll past the floating ActionHub button */}
+          <div className="h-32 md:h-40 w-full shrink-0"></div>
         </div>
       </main>
 

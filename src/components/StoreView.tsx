@@ -7,7 +7,7 @@ import confetti from 'canvas-confetti';
 const PREDEFINED_ICONS = ['🎮', '🎬', '🍿', '📚', '☕', '🍰', '🚶', '🛌'];
 
 export default function StoreView() {
-  const { user, coinBalance, setCoinBalance, rewards, addReward } = useStore();
+  const { user, isGuest, coinBalance, setCoinBalance, rewards, addReward, deleteReward } = useStore();
   
   const [title, setTitle] = useState('');
   const [cost, setCost] = useState(50);
@@ -15,16 +15,30 @@ export default function StoreView() {
 
   const handleAddReward = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user && !isGuest) return;
     
     const newReward = {
-      user_id: user.id,
+      id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
+      user_id: user?.id || 'guest',
       title,
       cost,
       icon,
+      created_at: new Date().toISOString()
     };
     
-    const { data, error } = await supabase.from('rewards').insert(newReward).select().single();
+    if (isGuest) {
+      addReward(newReward as any);
+      setTitle('');
+      setCost(50);
+      return;
+    }
+    
+    const { data, error } = await supabase.from('rewards').insert({
+      user_id: user!.id,
+      title,
+      cost,
+      icon
+    }).select().single();
     
     if (data && !error) {
       addReward(data);
@@ -34,7 +48,7 @@ export default function StoreView() {
   };
 
   const handlePurchase = async (rewardId: string, rewardCost: number, rewardTitle: string, e: React.MouseEvent) => {
-    if (!user) return;
+    if (!user && !isGuest) return;
     
     if (coinBalance < rewardCost) {
       // Small visual feedback instead of alert? Or just a toast, but we don't have a toast library. Let's just do nothing or a simple console log
@@ -45,15 +59,18 @@ export default function StoreView() {
     
     // Update local state and DB concurrently
     setCoinBalance(newBalance);
-    supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
     
-    // Record transaction
-    supabase.from('transactions').insert({
-      user_id: user.id,
-      amount: -rewardCost,
-      type: 'purchase',
-      description: `Purchased: ${rewardTitle}`
-    }).then();
+    if (user && !isGuest) {
+      supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
+      
+      // Record transaction
+      supabase.from('transactions').insert({
+        user_id: user.id,
+        amount: -rewardCost,
+        type: 'purchase',
+        description: `Purchased: ${rewardTitle}`
+      }).then();
+    }
     
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = (rect.left + rect.width / 2) / window.innerWidth;
@@ -141,7 +158,14 @@ export default function StoreView() {
             </p>
           ) : (
             rewards.map(reward => (
-              <div key={reward.id} className="bg-white/5 border border-(--color-border) p-5 rounded-xl flex flex-col items-center text-center gap-4 hover:border-(--color-reward)/50 transition-colors group">
+              <div key={reward.id} className="relative bg-white/5 border border-(--color-border) p-5 rounded-xl flex flex-col items-center text-center gap-4 hover:border-(--color-reward)/50 transition-colors group">
+                <button 
+                  onClick={() => deleteReward(reward.id)}
+                  className="absolute top-2 right-2 p-2 rounded-lg text-(--color-muted-text) hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                  title="Delete Reward"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
                 <div className="text-4xl bg-(--color-neutral) w-16 h-16 rounded-full flex items-center justify-center border border-(--color-border) shadow-md">
                   {reward.icon}
                 </div>

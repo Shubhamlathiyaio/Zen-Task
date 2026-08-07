@@ -117,12 +117,27 @@ export default function Auth() {
           </button>
         </form>
         
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center flex flex-col gap-3">
           <button 
             onClick={() => setIsLogin(!isLogin)}
             className="text-(--color-primary-60) bg-transparent border-none hover:text-(--color-on-surface) cursor-pointer text-sm transition-colors"
           >
             {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+
+          <div className="flex items-center gap-2 w-full max-w-[200px] mx-auto my-1">
+             <div className="h-px bg-(--color-border) flex-1"></div>
+             <span className="text-xs text-(--color-muted-text) uppercase tracking-wider">OR</span>
+             <div className="h-px bg-(--color-border) flex-1"></div>
+          </div>
+          
+          <button 
+            onClick={() => {
+              useStore.setState({ isGuest: true, user: null, coinBalance: 100 });
+            }}
+            className="text-(--color-muted-text) bg-transparent border border-(--color-border) hover:border-(--color-primary-60) hover:text-(--color-on-surface) rounded-lg py-2 px-4 cursor-pointer text-sm transition-all flex items-center justify-center gap-2 mx-auto w-fit"
+          >
+            Continue as Guest
           </button>
         </div>
       </div>

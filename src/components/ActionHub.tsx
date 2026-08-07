@@ -14,7 +14,7 @@ export default function ActionHub() {
   const [reward, setReward] = useState(10);
   const [isRequired, setIsRequired] = useState(true);
   
-  const { user, addTask, customTags, editingTask, setEditingTask, updateTaskContent } = useStore();
+  const { user, isGuest, addTask, editTask, customTags, editingTask, setEditingTask } = useStore();
   
   useEffect(() => {
     if (editingTask) {
@@ -22,22 +22,19 @@ export default function ActionHub() {
       setSelectedTags(editingTask.tags || []);
       setQuadrant(editingTask.quadrant);
       setReward(editingTask.reward_amount);
-      setIsRequired(editingTask.is_required);
       setIsOpen(true);
     }
   }, [editingTask]);
 
   const handleClose = () => {
     setIsOpen(false);
-    if (editingTask) {
-      setTimeout(() => setEditingTask(null), 300);
-    }
+    setEditingTask(null);
     setTitle('');
     setSelectedTags([]);
-    setReward(10);
     setQuadrant('q1_urgent_important');
+    setReward(10);
   };
-  
+
   // If no custom tags exist, provide some defaults for the UI just to click, 
   // but preferably the user adds them in settings.
   const availableTags = Object.keys(customTags).length > 0 
@@ -65,50 +62,60 @@ export default function ActionHub() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user && !isGuest) {
       alert("Please login first");
       return;
     }
     
     const newTask = {
-      user_id: user.id,
+      id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
+      user_id: user?.id || 'guest',
       title,
       tags: selectedTags,
       quadrant,
       reward_amount: reward,
       is_required: isRequired,
+      status: 'pending' as const,
+      created_at: new Date().toISOString()
     };
     
     if (editingTask) {
-      updateTaskContent(editingTask.id, newTask);
+      await editTask(editingTask.id, newTask);
       handleClose();
-    } else {
-      const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
-      
-      if (error) {
-        console.error("Supabase Insert Error:", error);
-        alert(`Error creating quest: ${error.message}\n(Make sure RLS policies allow inserts if enabled)`);
-        return;
-      }
-      
-      if (data) {
-        addTask(data);
-        handleClose();
-      }
+      return;
+    }
+    
+    if (isGuest) {
+      addTask(newTask as any);
+      handleClose();
+      return;
+    }
+    
+    const { data, error } = await supabase.from('tasks').insert({
+       user_id: user!.id,
+       title,
+       tags: selectedTags,
+       quadrant,
+       reward_amount: reward,
+       is_required: isRequired
+    }).select().single();
+    
+    if (error) {
+      console.error("Supabase Insert Error:", error);
+      alert(`Error creating quest: ${error.message}\n(Make sure RLS policies allow inserts if enabled)`);
+      return;
+    }
+    
+    if (data) {
+      addTask(data);
+      handleClose();
     }
   };
 
   return (
     <>
       <button 
-        onClick={() => {
-          setEditingTask(null);
-          setTitle('');
-          setSelectedTags([]);
-          setReward(10);
-          setQuadrant('q1_urgent_important');
-          setIsOpen(true);
-        }}
+        onClick={() => setIsOpen(true)}
         className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-(--color-primary) text-white hover:bg-(--color-primary-80) transition-transform active:scale-95 rounded-full h-14 md:h-16 px-6 md:px-8 flex items-center justify-center font-bold text-lg shadow-xl shadow-(--color-primary)/30 z-50 cursor-pointer border-none"
         style={{ fontFamily: 'var(--font-roboto)' }}
       >
@@ -119,15 +126,16 @@ export default function ActionHub() {
       {isOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-hidden">
           <div className="bg-(--color-neutral) border border-(--color-border) rounded-2xl p-6 w-full max-w-lg shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col box-border">
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 text-(--color-muted-text) hover:text-(--color-on-surface) bg-(--color-surface-2) rounded-full w-10 h-10 flex items-center justify-center transition-all cursor-pointer border-none"
+            >
+              <X className="w-6 h-6" />
+            </button>
             
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-normal text-(--color-on-surface) m-0" style={{ fontFamily: 'var(--font-varela)' }}>
-                {editingTask ? 'Edit Quest' : 'Forge New Quest'}
-              </h2>
-              <button onClick={handleClose} className="bg-transparent border-none text-(--color-muted-text) hover:text-red-500 cursor-pointer p-1">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            <h2 className="text-3xl mb-8 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>
+              {editingTask ? 'Edit Quest' : 'Forge New Quest'}
+            </h2>
             
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               
@@ -148,7 +156,6 @@ export default function ActionHub() {
                 <label className="text-(--color-muted-text) text-sm font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Tags</label>
                 
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {/* Show selected tags first (including custom ones) */}
                   {selectedTags.map(tag => (
                     <button
                       key={tag}
@@ -164,7 +171,6 @@ export default function ActionHub() {
                       {tag} ✕
                     </button>
                   ))}
-                  {/* Show unselected tags as suggestions */}
                   {availableTags.filter(tag => !selectedTags.includes(tag)).map(tag => (
                     <button
                       key={tag}
@@ -227,11 +233,11 @@ export default function ActionHub() {
               </div>
 
               <button 
-                type="submit"
-                className="w-full bg-(--color-primary) text-(--color-on-surface) hover:bg-(--color-primary-80) transition-transform active:scale-[0.98] h-14 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg border-none cursor-pointer mt-2 shadow-(--color-primary)/20"
+                type="submit" 
+                className="bg-(--color-primary) text-white h-14 rounded-lg font-bold text-lg hover:bg-(--color-primary-80) transition-colors active:scale-[0.98] cursor-pointer border-none shadow-xl shadow-(--color-primary)/20"
                 style={{ fontFamily: 'var(--font-roboto)' }}
               >
-                {editingTask ? 'Save Changes' : 'Manifest Quest'}
+                {editingTask ? 'Save Changes' : 'Forge Quest'}
               </button>
             </form>
           </div>

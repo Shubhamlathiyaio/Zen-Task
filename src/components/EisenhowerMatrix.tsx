@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, Trash2, Pencil } from 'lucide-react';
+import { Check, Pencil, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
@@ -74,67 +74,61 @@ function SortableTaskCard({ task }: { task: Task }) {
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0" onPointerDown={e => e.stopPropagation()}>
+        <button 
+          onClick={() => setEditingTask(task)}
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100"
+          title="Edit Quest"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button 
+          onClick={() => deleteTask(task.id)}
+          className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100 mr-2"
+          title="Delete Quest"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
         <span className="text-(--color-reward) font-bold text-sm">
           +{task.reward_amount}
         </span>
-        <div className="flex gap-1" onPointerDown={e => e.stopPropagation()}>
-          <button 
-            className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-8 h-8 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              setEditingTask(task);
-            }}
-            title="Edit Quest"
-          >
-            <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
-          </button>
-          
-          <button 
-            className="text-(--color-muted-text) hover:text-red-500 rounded-md w-8 h-8 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group opacity-0 group-hover:opacity-100"
-            onClick={(e) => {
-              if (confirm('Are you sure you want to abandon this quest?')) {
-                deleteTask(task.id);
-              }
-            }}
-            title="Abandon Quest"
-          >
-            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" />
-          </button>
-          
-          <button 
-            className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-10 h-10 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group"
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const x = (rect.left + rect.width / 2) / window.innerWidth;
-              const y = (rect.top + rect.height / 2) / window.innerHeight;
-              
-              confetti({
-                particleCount: 50,
-                spread: 60,
-                origin: { x, y },
-                colors: ['#925CF3', '#FACC15', '#4ADE80'],
-                disableForReducedMotion: true
-              });
-              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-              audio.volume = 0.5;
-              audio.play().catch(console.error);
-              updateTaskStatus(task.id, 'completed');
-            }}
-            title="Complete Quest"
-          >
-            <div className="border-2 border-(--color-muted-text) group-hover:border-(--color-primary-60) rounded-full p-0.5 transition-colors">
-              <Check className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </button>
-        </div>
+        <button 
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-10 h-10 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group"
+          onClick={(e) => {
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = (rect.left + rect.width / 2) / window.innerWidth;
+            const y = (rect.top + rect.height / 2) / window.innerHeight;
+            
+            confetti({
+              particleCount: 50,
+              spread: 60,
+              origin: { x, y },
+              colors: ['#925CF3', '#FACC15', '#4ADE80'],
+              disableForReducedMotion: true
+            });
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(console.error);
+            updateTaskStatus(task.id, 'completed');
+          }}
+          title="Complete Quest"
+        >
+          <div className="w-8 h-8 rounded-md flex items-center justify-center border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
+            <Check className="w-5 h-5 text-transparent group-hover:text-white" strokeWidth={4} />
+          </div>
+        </button>
       </div>
     </div>
   );
 }
 
 // Droppable Quadrant
+import { useDroppable } from '@dnd-kit/core';
+
 function QuadrantContainer({ id, title, tasks }: { id: QuadrantType, title: string, tasks: Task[] }) {
+  const { setNodeRef } = useDroppable({ id });
+  
   return (
-    <div className={`${QUADRANT_BG_TINTS[id]} rounded-xl p-6 shadow-xl border flex flex-col min-h-[300px]`}>
+    <div ref={setNodeRef} className={`${QUADRANT_BG_TINTS[id]} rounded-xl p-6 shadow-xl border flex flex-col min-h-[300px]`}>
       <h3 className="text-xl mb-4 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>{title}</h3>
       <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-3 flex-1 min-h-[150px]">

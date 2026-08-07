@@ -33,6 +33,30 @@ body {
   color-scheme: dark;
 }
 
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-neutral);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-60);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-2) var(--color-neutral);
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-varela);
 }

@@ -42,7 +42,7 @@ export default function ProfileView() {
           </div>
           
           <div className="flex flex-col gap-2 text-center md:text-left flex-1">
-            <h3 className="text-2xl font-bold text-(--color-on-surface)">{profile?.username || user?.email}</h3>
+            <h3 className="text-2xl font-bold text-(--color-on-surface)">{profile?.username || user?.email || 'Guest Adventurer'}</h3>
             <p className="text-(--color-muted-text)">Level 1 Novice Adventurer</p>
             <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
               <span className="px-3 py-1 bg-(--color-primary)/20 text-(--color-primary-60) rounded-full text-xs font-bold uppercase tracking-wider border border-(--color-primary-60)/30">Hero</span>

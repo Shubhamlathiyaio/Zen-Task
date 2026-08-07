@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, Trash2, Pencil } from 'lucide-react';
+import { Check, Pencil, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
@@ -92,59 +92,53 @@ function SortableTaskItem({ task }: { task: Task }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t border-(--color-border) md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
-        <div className="flex items-center">
-          <span className="text-(--color-reward) font-bold text-lg px-2">+{task.reward_amount}</span>
-        </div>
-        <div className="flex gap-2" onPointerDown={e => e.stopPropagation()}>
+      <div className="flex items-center gap-4 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t border-(--color-border) md:border-none pt-4 md:pt-0 mt-2 md:mt-0" onPointerDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
           <button 
-            className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-8 h-8 flex items-center justify-center transition-all cursor-pointer bg-(--color-surface-2) border-none group opacity-0 group-hover:opacity-100 md:opacity-100"
-            onClick={(e) => {
-              setEditingTask(task);
-            }}
+            onClick={() => setEditingTask(task)}
+            className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
             title="Edit Quest"
           >
-            <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+            <Pencil className="w-5 h-5" />
           </button>
-          
           <button 
-            className="text-(--color-muted-text) hover:text-red-500 rounded-md w-8 h-8 flex items-center justify-center transition-all cursor-pointer bg-(--color-surface-2) border-none group opacity-0 group-hover:opacity-100 md:opacity-100"
-            onClick={(e) => {
-              if (confirm('Are you sure you want to abandon this quest?')) {
-                deleteTask(task.id);
-              }
-            }}
-            title="Abandon Quest"
+            onClick={() => deleteTask(task.id)}
+            className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
+            title="Delete Quest"
           >
-            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" />
+            <Trash2 className="w-5 h-5" />
           </button>
-          
-          <button 
-            className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-12 h-12 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group shrink-0"
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const x = (rect.left + rect.width / 2) / window.innerWidth;
-              const y = (rect.top + rect.height / 2) / window.innerHeight;
-              
-              confetti({
-                particleCount: 80,
-                spread: 70,
-                origin: { x, y },
-                colors: ['#925CF3', '#FACC15', '#4ADE80'],
-                disableForReducedMotion: true
-              });
+          <span className="text-(--color-reward) font-bold text-lg px-2 ml-2">+{task.reward_amount}</span>
+        </div>
+        <button 
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-12 h-12 flex items-center justify-center transition-all cursor-pointer bg-transparent border-none group"
+          onPointerDown={(e) => e.stopPropagation()} // Prevent dragging when clicking complete
+          onClick={(e) => {
+            e.stopPropagation();
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = (rect.left + rect.width / 2) / window.innerWidth;
+            const y = (rect.top + rect.height / 2) / window.innerHeight;
+            
+            confetti({
+              particleCount: 50,
+              spread: 60,
+              origin: { x, y },
+              colors: ['#925CF3', '#FACC15', '#4ADE80'],
+              disableForReducedMotion: true
+            });
+            try {
               const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
               audio.volume = 0.5;
               audio.play().catch(console.error);
-              updateTaskStatus(task.id, 'completed');
-            }}
-            title="Complete Quest"
-          >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center border-4 border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all shadow-sm">
-              <Check className="w-6 h-6 text-transparent group-hover:text-white" strokeWidth={4} />
-            </div>
-          </button>
-        </div>
+            } catch(e) {}
+            updateTaskStatus(task.id, 'completed');
+          }}
+          title="Complete Quest"
+        >
+          <div className="w-8 h-8 rounded-md flex items-center justify-center border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
+            <Check className="w-5 h-5 text-transparent group-hover:text-white" strokeWidth={4} />
+          </div>
+        </button>
       </div>
     </div>
   );

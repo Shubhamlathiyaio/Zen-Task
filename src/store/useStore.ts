@@ -40,8 +40,41 @@ export interface Soundscape {
   cost: number;
 }
 
+export interface Party {
+  id: string;
+  name: string;
+  invite_code: string;
+}
+
+export interface PartyMember {
+  id: string;
+  party_id: string;
+  user_id: string;
+  role: string;
+  profiles?: Profile;
+}
+
+export interface TavernActivity {
+  id: string;
+  type: 'challenge' | 'gift' | 'task';
+  message: string;
+  timestamp: string;
+}
+
+export interface CoinTransfer {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  amount: number;
+  status: 'Pending' | 'Completed' | 'Rejected' | 'Cancelled';
+  challenge_task_id?: string;
+  created_at: string;
+}
+
+
 interface StoreState {
   user: any | null;
+  isGuest: boolean;
   coinBalance: number;
   tasks: Task[];
   rewards: Reward[];
@@ -50,7 +83,12 @@ interface StoreState {
   activeSoundscape: string | null;
   currentView: ViewType;
   taskViewMode: TaskViewMode;
-  editingTask: Task | null;
+  
+  // Party & Social State
+  activeParty: Party | null;
+  partyMembers: PartyMember[];
+  tavernActivities: TavernActivity[];
+  pendingTransfers: CoinTransfer[];
   
   // Timer State
   timerMode: 'work' | 'shortBreak' | 'longBreak';
@@ -72,6 +110,7 @@ interface StoreState {
   setCustomTagColor: (tag: string, color: string) => void;
   deleteCustomTag: (tag: string) => void;
   
+  setIsGuest: (isGuest: boolean) => void;
   setUser: (user: any) => void;
   setCoinBalance: (balance: number) => void;
   setTasks: (tasks: Task[]) => void;
@@ -80,11 +119,21 @@ interface StoreState {
   setCurrentView: (view: ViewType) => void;
   setTaskViewMode: (mode: TaskViewMode) => void;
   
+  // Party Actions
+  createParty: (name: string) => Promise<void>;
+  joinParty: (inviteCode: string) => Promise<void>;
+  sendGift: (receiverId: string, amount: number) => Promise<void>;
+  requestCoinsWithChallenge: (receiverId: string, amount: number, taskId: string) => Promise<void>;
+  fetchPartyDetails: () => Promise<void>;
+  setupRealtime: () => void;
+  setEditingTask: (task: Task | null) => void;
+  
   addTask: (task: Task) => void;
   addReward: (reward: Reward) => void;
-  updateTaskStatus: (taskId: string, status: 'completed' | 'failed' | 'pending') => void;
-  updateTaskContent: (taskId: string, updates: Partial<Task>) => void;
+  deleteReward: (rewardId: string) => Promise<void>;
+  updateTaskStatus: (taskId: string, status: 'completed' | 'failed') => void;
   deleteTask: (taskId: string) => void;
+  editTask: (taskId: string, updates: Partial<Task>) => void;
   unlockSoundscape: (id: string) => void;
   setActiveSoundscape: (id: string | null) => void;
 
@@ -104,6 +153,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       user: null,
+      isGuest: false,
       coinBalance: 0,
       tasks: [],
       rewards: [],
@@ -115,6 +165,10 @@ export const useStore = create<StoreState>()(
       activeSoundscape: null,
       currentView: 'tasks',
       taskViewMode: 'matrix',
+      activeParty: null,
+      partyMembers: [],
+      tavernActivities: [],
+      pendingTransfers: [],
       editingTask: null,
       avatarStyle: 'adventurer',
       avatarSeed: '',
@@ -139,6 +193,7 @@ export const useStore = create<StoreState>()(
         return { customTags: newTags };
       }),
 
+  setIsGuest: (isGuest) => set({ isGuest }),
   setUser: (user) => set({ user }),
   setCoinBalance: (coinBalance) => set({ coinBalance }),
   setTasks: (tasks) => set({ tasks }),
@@ -146,13 +201,13 @@ export const useStore = create<StoreState>()(
   setProfiles: (profiles) => set({ profiles }),
   setCurrentView: (view) => set({ currentView: view }),
   setTaskViewMode: (mode) => set({ taskViewMode: mode }),
+  setEditingTask: (task) => set({ editingTask: task }),
   
   setTimerMode: (mode) => set({ timerMode: mode }),
   setTimerTimeLeft: (time) => set({ timerTimeLeft: time }),
   setTimerIsRunning: (isRunning) => set({ timerIsRunning: isRunning }),
   setAvatarStyle: (style) => set({ avatarStyle: style }),
   setAvatarSeed: (seed) => set({ avatarSeed: seed }),
-  setEditingTask: (task) => set({ editingTask: task }),
   setTimerSettings: (settings) => set((state) => {
     const newSettings = { ...state.timerSettings, ...settings };
     if (!state.timerIsRunning) {
@@ -163,31 +218,6 @@ export const useStore = create<StoreState>()(
     }
     return { timerSettings: newSettings };
   }),
-
-  updateTaskContent: async (taskId, updates) => {
-    set((state) => ({
-      tasks: state.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t)
-    }));
-    
-    try {
-      await supabase.from('tasks').update(updates).eq('id', taskId);
-    } catch (e) {
-      console.error("Error updating task:", e);
-    }
-  },
-  
-  deleteTask: async (taskId) => {
-    set((state) => ({
-      tasks: state.tasks.filter(t => t.id !== taskId)
-    }));
-    
-    try {
-      await supabase.from('tasks').delete().eq('id', taskId);
-    } catch (e) {
-      console.error("Error deleting task:", e);
-    }
-  },
-
   decrementTimer: () => set((state) => {
     if (state.timerTimeLeft <= 1) {
       try {
@@ -215,6 +245,12 @@ export const useStore = create<StoreState>()(
   
   addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
   addReward: (reward) => set((state) => ({ rewards: [...state.rewards, reward] })),
+  deleteReward: async (rewardId: string) => {
+    set((state) => ({ rewards: state.rewards.filter(r => r.id !== rewardId) }));
+    if (get().user) {
+      await supabase.from('rewards').delete().eq('id', rewardId);
+    }
+  },
   
   updateTaskStatus: async (taskId, status) => {
     const { tasks, user, coinBalance } = get();
@@ -226,21 +262,54 @@ export const useStore = create<StoreState>()(
       tasks: state.tasks.map(t => t.id === taskId ? { ...t, status } : t)
     }));
 
-    if (status === 'completed' && user) {
+    if (status === 'completed') {
       const newBalance = coinBalance + task.reward_amount;
       set({ coinBalance: newBalance });
       
-      // Update DB
-      supabase.from('tasks').update({ status }).eq('id', taskId).then();
-      supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
-      supabase.from('transactions').insert({
-        user_id: user.id,
-        amount: task.reward_amount,
-        type: 'reward',
-        description: `Completed quest: ${task.title}`
-      }).then();
+      if (user) {
+        // Update DB
+        supabase.from('tasks').update({ status }).eq('id', taskId).then();
+        supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
+        supabase.from('transactions').insert({
+          user_id: user.id,
+          amount: task.reward_amount,
+          type: 'reward',
+          description: `Completed quest: ${task.title}`
+        }).then();
+      }
+
+      // Check for pending challenges to complete transfers
+      const { pendingTransfers } = get();
+      const challengeTransfer = pendingTransfers.find(pt => pt.challenge_task_id === taskId && pt.status === 'Pending' && pt.receiver_id === user.id);
+      
+      if (challengeTransfer) {
+        // Complete the transfer
+        supabase.from('coin_transfers').update({ status: 'Completed' }).eq('id', challengeTransfer.id).then(() => {
+          // Add funds to the receiver
+          const finalBalance = newBalance + challengeTransfer.amount;
+          set({ coinBalance: finalBalance });
+          supabase.from('profiles').update({ coin_balance: finalBalance }).eq('id', user.id).then();
+        });
+      }
+
     } else if (user) {
       supabase.from('tasks').update({ status }).eq('id', taskId).then();
+    }
+  },
+
+  deleteTask: async (taskId: string) => {
+    set((state) => ({ tasks: state.tasks.filter(t => t.id !== taskId) }));
+    if (get().user) {
+      await supabase.from('tasks').delete().eq('id', taskId);
+    }
+  },
+
+  editTask: async (taskId: string, updates: Partial<Task>) => {
+    set((state) => ({
+      tasks: state.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t)
+    }));
+    if (get().user) {
+      await supabase.from('tasks').update(updates).eq('id', taskId);
     }
   },
 
@@ -302,7 +371,185 @@ export const useStore = create<StoreState>()(
     }
   },
 
+  createParty: async (name: string) => {
+    const { user } = get();
+    if (!user) return;
+    
+    if (!name || name.trim() === '') {
+      alert("Please enter a party name first!");
+      return;
+    }
+    
+    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { data: party, error } = await supabase.from('parties').insert({
+      name,
+      created_by: user.id,
+      invite_code: inviteCode
+    }).select().single();
+    
+    if (error) {
+      alert("Database error creating party: " + error.message);
+      return;
+    }
+    
+    if (party) {
+      const { error: memberError } = await supabase.from('party_members').insert({
+        party_id: party.id,
+        user_id: user.id,
+        role: 'Leader'
+      });
+      if (memberError) {
+        alert("Database error joining party: " + memberError.message);
+        return;
+      }
+      set({ activeParty: party });
+      get().fetchPartyDetails();
+    }
+  },
+
+  joinParty: async (inviteCode: string) => {
+    const { user } = get();
+    if (!user) return;
+    
+    if (!inviteCode || inviteCode.trim() === '') {
+      alert("Please enter an invite code!");
+      return;
+    }
+    
+    const { data: party, error: findError } = await supabase.from('parties').select('*').eq('invite_code', inviteCode).single();
+    
+    if (findError || !party) {
+      alert("Could not find a party with that invite code.");
+      return;
+    }
+    
+    if (party) {
+      const { error: joinError } = await supabase.from('party_members').insert({
+        party_id: party.id,
+        user_id: user.id,
+        role: 'Member'
+      });
+      if (joinError) {
+        alert("Failed to join: " + joinError.message);
+        return;
+      }
+      set({ activeParty: party });
+      get().fetchPartyDetails();
+    }
+  },
+
+  sendGift: async (receiverId: string, amount: number) => {
+    const { user, coinBalance } = get();
+    if (!user || coinBalance < amount) return;
+    
+    // Deduct locally
+    set({ coinBalance: coinBalance - amount });
+    
+    // Process transfer
+    await supabase.from('coin_transfers').insert({
+      sender_id: user.id,
+      receiver_id: receiverId,
+      amount: amount,
+      status: 'Completed'
+    });
+    
+    // Note: A real app would use a DB function/RPC to ensure atomic balance transfers.
+    // For now we assume the receiver's realtime sub picks it up or we increment it directly.
+    const { data: receiverProfile } = await supabase.from('profiles').select('coin_balance').eq('id', receiverId).single();
+    if (receiverProfile) {
+      await supabase.from('profiles').update({ coin_balance: receiverProfile.coin_balance + amount }).eq('id', receiverId);
+    }
+    await supabase.from('profiles').update({ coin_balance: coinBalance - amount }).eq('id', user.id);
+  },
+  
+  requestCoinsWithChallenge: async (receiverId: string, amount: number, taskId: string) => {
+    const { user, coinBalance } = get();
+    if (!user || coinBalance < amount) return;
+    
+    // Deduct sender balance immediately for escrow (optional, but good for logic)
+    set({ coinBalance: coinBalance - amount });
+    await supabase.from('profiles').update({ coin_balance: coinBalance - amount }).eq('id', user.id);
+    
+    await supabase.from('coin_transfers').insert({
+      sender_id: user.id,
+      receiver_id: receiverId,
+      amount: amount,
+      status: 'Pending',
+      challenge_task_id: taskId
+    });
+  },
+
+  fetchPartyDetails: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    // Find if user is in a party
+    const { data: membership } = await supabase.from('party_members').select('party_id').eq('user_id', user.id).single();
+    
+    if (membership) {
+      const { data: party } = await supabase.from('parties').select('*').eq('id', membership.party_id).single();
+      if (party) set({ activeParty: party });
+      
+      const { data: members } = await supabase.from('party_members')
+        .select(`*, profiles(username, coin_balance)`)
+        .eq('party_id', membership.party_id);
+      
+      if (members) {
+        set({ partyMembers: members as any });
+      }
+      
+      const { data: transfers } = await supabase.from('coin_transfers')
+        .select('*')
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
+        
+      if (transfers) {
+        set({ pendingTransfers: transfers });
+      }
+      
+      get().setupRealtime();
+    }
+  },
+
+  setupRealtime: () => {
+    // Only setup once
+    const existingChannel = supabase.getChannels().find(c => c.topic === 'tavern_activity');
+    if (existingChannel) return;
+
+    supabase.channel('tavern_activity')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'coin_transfers' }, payload => {
+        const transfer = payload.new as CoinTransfer;
+        const msg = transfer.challenge_task_id 
+          ? `A challenge of ${transfer.amount} Solar Gold was issued!`
+          : `A gift of ${transfer.amount} Solar Gold was sent!`;
+          
+        set((state) => ({
+          tavernActivities: [{
+            id: Math.random().toString(),
+            type: transfer.challenge_task_id ? 'challenge' : 'gift',
+            message: msg,
+            timestamp: new Date().toISOString()
+          }, ...state.tavernActivities].slice(0, 10),
+          pendingTransfers: [...state.pendingTransfers, transfer]
+        }));
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, payload => {
+        const task = payload.new as Task;
+        if (task.status === 'completed') {
+           set((state) => ({
+             tavernActivities: [{
+               id: Math.random().toString(),
+               type: 'task',
+               message: `Someone just completed: ${task.title}`,
+               timestamp: new Date().toISOString()
+             }, ...state.tavernActivities].slice(0, 10)
+           }));
+        }
+      })
+      .subscribe();
+  },
+
   fetchPartyData: async () => {
+    // For legacy support or global fallback
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, username, coin_balance')
@@ -329,7 +576,13 @@ export const useStore = create<StoreState>()(
         timerSettings: state.timerSettings,
         theme: state.theme,
         taskViewMode: state.taskViewMode,
-        soundscapes: state.soundscapes
+        soundscapes: state.soundscapes,
+        isGuest: state.isGuest,
+        ...(state.isGuest ? {
+          coinBalance: state.coinBalance,
+          tasks: state.tasks,
+          rewards: state.rewards
+        } : {})
       }),
     }
   )
