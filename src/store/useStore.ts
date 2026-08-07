@@ -89,6 +89,7 @@ interface StoreState {
   partyMembers: PartyMember[];
   tavernActivities: TavernActivity[];
   pendingTransfers: CoinTransfer[];
+  onlineCount: number;
   
   // Timer State
   timerMode: 'work' | 'shortBreak' | 'longBreak';
@@ -126,6 +127,8 @@ interface StoreState {
   requestCoinsWithChallenge: (receiverId: string, amount: number, taskId: string) => Promise<void>;
   fetchPartyDetails: () => Promise<void>;
   setupRealtime: () => void;
+  setupPresence: () => void;
+  teardownPresence: () => void;
   setEditingTask: (task: Task | null) => void;
   
   addTask: (task: Task) => void;
@@ -169,6 +172,7 @@ export const useStore = create<StoreState>()(
       partyMembers: [],
       tavernActivities: [],
       pendingTransfers: [],
+      onlineCount: 0,
       editingTask: null,
       avatarStyle: 'adventurer',
       avatarSeed: '',
@@ -546,6 +550,46 @@ export const useStore = create<StoreState>()(
         }
       })
       .subscribe();
+  },
+
+  setupPresence: () => {
+    const existingChannel = supabase.getChannels().find(c => c.topic === 'online_presence');
+    if (existingChannel) return;
+
+    const channel = supabase.channel('online_presence');
+    const { user } = get();
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const onlineUsers = new Set<string>(
+          Object.values(state)
+            .flat()
+            .map((p: any) => p.user_id)
+            .filter(Boolean)
+        );
+        set({ onlineCount: onlineUsers.size });
+      })
+      .subscribe(async (status) => {
+        if (status !== 'SUBSCRIBED') return;
+        try {
+          await channel.track({
+            user_id: user?.id,
+            username: user?.email?.split('@')[0] || 'guest',
+            online_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.error('Presence track failed:', e);
+        }
+      });
+  },
+
+  teardownPresence: () => {
+    const channel = supabase.getChannels().find(c => c.topic === 'online_presence');
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+    set({ onlineCount: 0 });
   },
 
   fetchPartyData: async () => {

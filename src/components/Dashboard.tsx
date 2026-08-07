@@ -15,8 +15,14 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Dashboard() {
-  const { user, isGuest, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed } = useStore();
+  const { user, isGuest, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence } = useStore();
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!user && !isGuest) return;
+    setupPresence();
+    return () => teardownPresence();
+  }, [user?.id, isGuest, setupPresence, teardownPresence]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -105,6 +111,15 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 md:gap-4 bg-(--color-surface-2) py-2 px-3 md:px-4 rounded-xl border border-(--color-border)">
               <Coins className="text-(--color-reward) w-5 h-5" />
               <span className="font-bold text-(--color-reward) text-lg font-mono">{coinBalance}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-(--color-surface-2) py-2 px-3 rounded-xl border border-(--color-border)" title="Adventurers online right now">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <Users className="text-(--color-primary-60) w-4 h-4" />
+              <span className="font-bold text-(--color-on-surface) text-sm font-mono">{onlineCount}</span>
             </div>
             
             <button 
