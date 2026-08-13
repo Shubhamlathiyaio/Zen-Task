@@ -124,14 +124,40 @@ function SortableTaskCard({ task }: { task: Task }) {
 // Droppable Quadrant
 import { useDroppable } from '@dnd-kit/core';
 
-function QuadrantContainer({ id, title, tasks }: { id: QuadrantType, title: string, tasks: Task[] }) {
+function QuadrantContainer({ 
+  id, title, tasks, isActiveMobile, onClick 
+}: { 
+  id: QuadrantType, title: string, tasks: Task[], isActiveMobile: boolean, onClick: () => void 
+}) {
   const { setNodeRef } = useDroppable({ id });
   
   return (
-    <div ref={setNodeRef} className={`${QUADRANT_BG_TINTS[id]} rounded-xl p-6 shadow-xl border flex flex-col min-h-[300px]`}>
-      <h3 className="text-xl mb-4 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>{title}</h3>
-      <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-3 flex-1 min-h-[150px]">
+    <div 
+      ref={setNodeRef} 
+      onClick={onClick}
+      className={`${QUADRANT_BG_TINTS[id]} rounded-xl shadow-xl border flex flex-col transition-all duration-300 relative
+        ${isActiveMobile ? 'p-4 md:p-6 overflow-y-auto cursor-default' : 'p-3 md:p-6 overflow-hidden cursor-pointer opacity-70 hover:opacity-100'} 
+        md:min-h-[300px] w-full h-full
+      `}
+    >
+      <div className="flex items-center gap-2 mb-2 md:mb-4">
+        <h3 
+          className={`font-bold text-(--color-on-surface) transition-all md:text-xl md:whitespace-normal
+            ${isActiveMobile ? 'text-lg whitespace-normal' : 'text-sm whitespace-nowrap overflow-hidden text-ellipsis'} 
+          `} 
+          style={{ fontFamily: 'var(--font-varela)' }}
+        >
+          {title}
+        </h3>
+        {!isActiveMobile && (
+          <div className={`md:hidden shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-(--color-on-surface) text-(--color-surface)`}>
+            {tasks.length}
+          </div>
+        )}
+      </div>
+      
+      <div className={`flex flex-col gap-3 flex-1 min-h-[50px] md:min-h-[150px] ${!isActiveMobile ? 'hidden md:flex' : 'flex'}`}>
+        <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           <AnimatePresence>
             {tasks.map(task => (
               <motion.div
@@ -145,12 +171,12 @@ function QuadrantContainer({ id, title, tasks }: { id: QuadrantType, title: stri
             ))}
           </AnimatePresence>
           {tasks.length === 0 && (
-            <div className="flex-1 flex items-center justify-center border-2 border-dashed border-(--color-border) rounded-lg p-4 opacity-50">
+            <div className="flex-1 flex items-center justify-center border-2 border-dashed border-(--color-border) rounded-lg p-4 opacity-50 min-h-[100px]">
               <span className="text-(--color-muted-text) text-sm text-center">Drop quests here</span>
             </div>
           )}
-        </div>
-      </SortableContext>
+        </SortableContext>
+      </div>
     </div>
   );
 }
@@ -159,6 +185,7 @@ function QuadrantContainer({ id, title, tasks }: { id: QuadrantType, title: stri
 export default function EisenhowerMatrix() {
   const { tasks, setTasks, user } = useStore();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeMobileQuadrant, setActiveMobileQuadrant] = useState<QuadrantType>('q1_urgent_important');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // Prevent drag on simple clicks
@@ -179,13 +206,24 @@ export default function EisenhowerMatrix() {
     
     const activeTaskId = active.id as string;
     const overId = over.id as string;
+    
+    // Set active mobile quadrant for animation on drag-hover
+    const isOverQuadrant = ['q1_urgent_important', 'q2_not_urgent_important', 'q3_urgent_not_important', 'q4_not_urgent_not_important'].includes(overId);
+    if (isOverQuadrant) {
+      setActiveMobileQuadrant(overId as QuadrantType);
+    } else {
+      const overTask = tasks.find(t => t.id === overId);
+      if (overTask) {
+        setActiveMobileQuadrant(overTask.quadrant);
+      }
+    }
+
     if (activeTaskId === overId) return;
 
     const activeIndex = tasks.findIndex(t => t.id === activeTaskId);
     if (activeIndex === -1) return;
     
     const activeTask = tasks[activeIndex];
-    const isOverQuadrant = ['q1_urgent_important', 'q2_not_urgent_important', 'q3_urgent_not_important', 'q4_not_urgent_not_important'].includes(overId);
     
     if (isOverQuadrant) {
       const destQ = overId as QuadrantType;
@@ -235,36 +273,71 @@ export default function EisenhowerMatrix() {
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
+  const mCols = (activeMobileQuadrant === 'q1_urgent_important' || activeMobileQuadrant === 'q3_urgent_not_important') ? '85% 15%' : '15% 85%';
+  const mRows = (activeMobileQuadrant === 'q1_urgent_important' || activeMobileQuadrant === 'q2_not_urgent_important') ? '85% 15%' : '15% 85%';
+
   return (
-    <DndContext 
-      sensors={sensors} 
-      collisionDetection={closestCorners} 
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
-        <QuadrantContainer 
-          id="q1_urgent_important" 
-          title="Q1: Urgent & Important (Do First)" 
-          tasks={getQuadrantTasks('q1_urgent_important')} 
-        />
-        <QuadrantContainer 
-          id="q2_not_urgent_important" 
-          title="Q2: Not Urgent, Important (Schedule)" 
-          tasks={getQuadrantTasks('q2_not_urgent_important')} 
-        />
-        <QuadrantContainer 
-          id="q3_urgent_not_important" 
-          title="Q3: Urgent, Not Important (Delegate)" 
-          tasks={getQuadrantTasks('q3_urgent_not_important')} 
-        />
-        <QuadrantContainer 
-          id="q4_not_urgent_not_important" 
-          title="Q4: Neither (Eliminate)" 
-          tasks={getQuadrantTasks('q4_not_urgent_not_important')} 
-        />
-      </div>
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
+      <style>{`
+        .dynamic-mobile-grid {
+          display: grid;
+          gap: 0.5rem;
+          height: calc(100vh - 180px);
+          min-height: 400px;
+          transition: grid-template-columns 0.35s ease, grid-template-rows 0.35s ease;
+          grid-template-columns: var(--m-cols);
+          grid-template-rows: var(--m-rows);
+        }
+        @media (min-width: 768px) {
+          .dynamic-mobile-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: auto;
+            height: auto;
+            gap: 1.5rem;
+          }
+        }
+      `}</style>
+      
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCorners} 
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div 
+          className="dynamic-mobile-grid w-full"
+          style={{ '--m-cols': mCols, '--m-rows': mRows } as React.CSSProperties}
+        >
+          <QuadrantContainer 
+            id="q1_urgent_important" 
+            title="Q1: Urgent & Important" 
+            tasks={getQuadrantTasks('q1_urgent_important')} 
+            isActiveMobile={activeMobileQuadrant === 'q1_urgent_important'}
+            onClick={() => setActiveMobileQuadrant('q1_urgent_important')}
+          />
+          <QuadrantContainer 
+            id="q2_not_urgent_important" 
+            title="Q2: Not Urgent, Important" 
+            tasks={getQuadrantTasks('q2_not_urgent_important')} 
+            isActiveMobile={activeMobileQuadrant === 'q2_not_urgent_important'}
+            onClick={() => setActiveMobileQuadrant('q2_not_urgent_important')}
+          />
+          <QuadrantContainer 
+            id="q3_urgent_not_important" 
+            title="Q3: Urgent, Not Important" 
+            tasks={getQuadrantTasks('q3_urgent_not_important')} 
+            isActiveMobile={activeMobileQuadrant === 'q3_urgent_not_important'}
+            onClick={() => setActiveMobileQuadrant('q3_urgent_not_important')}
+          />
+          <QuadrantContainer 
+            id="q4_not_urgent_not_important" 
+            title="Q4: Neither (Eliminate)" 
+            tasks={getQuadrantTasks('q4_not_urgent_not_important')} 
+            isActiveMobile={activeMobileQuadrant === 'q4_not_urgent_not_important'}
+            onClick={() => setActiveMobileQuadrant('q4_not_urgent_not_important')}
+          />
+        </div>
 
       <DragOverlay>
         {activeTask ? (
@@ -281,5 +354,6 @@ export default function EisenhowerMatrix() {
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 }
