@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { QuadrantType } from '../store/useStore';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Calendar, Target } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
 export default function ActionHub() {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'task' | 'habit'>('task');
   const [title, setTitle] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [quadrant, setQuadrant] = useState<QuadrantType>('q1_urgent_important');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [reward, setReward] = useState(10);
   const [isRequired, setIsRequired] = useState(true);
   
-  const { user, isGuest, addTask, editTask, customTags, editingTask, setEditingTask } = useStore();
+  const { user, isGuest, addTask, addHabit, editTask, customTags, editingTask, setEditingTask } = useStore();
   
   useEffect(() => {
     if (editingTask) {
+      setActiveTab('task');
       setTitle(editingTask.title);
       setSelectedTags(editingTask.tags || []);
       setQuadrant(editingTask.quadrant);
@@ -32,11 +35,10 @@ export default function ActionHub() {
     setTitle('');
     setSelectedTags([]);
     setQuadrant('q1_urgent_important');
+    setFrequency('daily');
     setReward(10);
   };
 
-  // If no custom tags exist, provide some defaults for the UI just to click, 
-  // but preferably the user adds them in settings.
   const availableTags = Object.keys(customTags).length > 0 
     ? Object.keys(customTags) 
     : ['Work', 'Health', 'Learning', 'Chores', 'Social', 'Personal'];
@@ -67,48 +69,93 @@ export default function ActionHub() {
       return;
     }
     
-    const newTask = {
-      id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
-      user_id: user?.id || 'guest',
-      title,
-      tags: selectedTags,
-      quadrant,
-      reward_amount: reward,
-      is_required: isRequired,
-      status: 'pending' as const,
-      created_at: new Date().toISOString()
-    };
-    
-    if (editingTask) {
-      await editTask(editingTask.id, newTask);
-      handleClose();
-      return;
-    }
-    
-    if (isGuest) {
-      addTask(newTask as any);
-      handleClose();
-      return;
-    }
-    
-    const { data, error } = await supabase.from('tasks').insert({
-       user_id: user!.id,
-       title,
-       tags: selectedTags,
-       quadrant,
-       reward_amount: reward,
-       is_required: isRequired
-    }).select().single();
-    
-    if (error) {
-      console.error("Supabase Insert Error:", error);
-      alert(`Error creating quest: ${error.message}\n(Make sure RLS policies allow inserts if enabled)`);
-      return;
-    }
-    
-    if (data) {
-      addTask(data);
-      handleClose();
+    if (activeTab === 'task') {
+      const newTask = {
+        id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
+        user_id: user?.id || 'guest',
+        title,
+        tags: selectedTags,
+        quadrant,
+        reward_amount: reward,
+        is_required: isRequired,
+        status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        pending_coins: 0
+      };
+      
+      if (editingTask) {
+        await editTask(editingTask.id, newTask);
+        handleClose();
+        return;
+      }
+      
+      if (isGuest) {
+        addTask(newTask as any);
+        handleClose();
+        return;
+      }
+      
+      const { data, error } = await supabase.from('tasks').insert({
+         user_id: user!.id,
+         title,
+         tags: selectedTags,
+         quadrant,
+         reward_amount: reward,
+         is_required: isRequired
+      }).select().single();
+      
+      if (error) {
+        console.error("Supabase Insert Error:", error);
+        alert(`Error creating quest: ${error.message}`);
+        return;
+      }
+      
+      if (data) {
+        addTask(data);
+        handleClose();
+      }
+    } else {
+      // Habit creation
+      const newHabit = {
+        id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
+        user_id: user?.id || 'guest',
+        title,
+        tags: selectedTags,
+        frequency,
+        reward_amount: reward,
+        is_required: isRequired,
+        streak_count: 0,
+        pending_coins: 0,
+        created_at: new Date().toISOString()
+      };
+      
+      if (isGuest) {
+        addHabit(newHabit as any);
+        handleClose();
+        return;
+      }
+      
+      const { data, error } = await supabase.from('habits').insert({
+         user_id: user!.id,
+         title,
+         tags: selectedTags,
+         frequency,
+         reward_amount: reward,
+         is_required: isRequired,
+         streak_count: 0,
+         pending_coins: 0
+      }).select().single();
+      
+      if (error) {
+        console.error("Supabase Insert Error:", error);
+        alert(`Error creating habit: ${error.message}`);
+        return;
+      }
+      
+      if (data) {
+        addHabit(data);
+        handleClose();
+      }
     }
   };
 
@@ -120,42 +167,68 @@ export default function ActionHub() {
         style={{ fontFamily: 'var(--font-roboto)' }}
       >
         <Plus className="w-6 h-6 mr-2" />
-        Add Quest
+        Add Action
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-hidden">
-          <div className="bg-(--color-neutral) border border-(--color-border) rounded-2xl p-6 w-full max-w-lg shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col box-border">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-hidden">
+          <div className="bg-(--color-surface) border-2 border-(--color-primary-60) rounded-2xl p-6 w-full max-w-lg shadow-[0_0_40px_rgba(146,92,243,0.3)] relative my-auto max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col box-border">
             <button 
               onClick={handleClose}
-              className="absolute top-4 right-4 text-(--color-muted-text) hover:text-(--color-on-surface) bg-(--color-surface-2) rounded-full w-10 h-10 flex items-center justify-center transition-all cursor-pointer border-none"
+              className="absolute top-4 right-4 text-(--color-primary-60) hover:text-(--color-on-surface) bg-(--color-surface-2) hover:bg-(--color-primary) rounded-full w-10 h-10 flex items-center justify-center transition-all cursor-pointer border-none"
             >
               <X className="w-6 h-6" />
             </button>
             
-            <h2 className="text-3xl mb-8 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>
-              {editingTask ? 'Edit Quest' : 'Forge New Quest'}
+            <h2 className="text-2xl mb-6 font-bold text-(--color-on-surface) text-center" style={{ fontFamily: 'var(--font-varela)' }}>
+              {editingTask ? 'Edit Quest' : 'Forge New Action'}
             </h2>
             
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            {!editingTask && (
+              <div className="flex bg-(--color-surface-2) p-1 rounded-xl mb-6">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('task')}
+                  className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all border-none cursor-pointer ${
+                    activeTab === 'task' 
+                      ? 'bg-(--color-primary) text-white shadow-md' 
+                      : 'bg-transparent text-(--color-primary-60) hover:text-(--color-on-surface)'
+                  }`}
+                >
+                  <Target className="w-4 h-4" /> Quest
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('habit')}
+                  className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all border-none cursor-pointer ${
+                    activeTab === 'habit' 
+                      ? 'bg-(--color-primary) text-white shadow-md' 
+                      : 'bg-transparent text-(--color-primary-60) hover:text-(--color-on-surface)'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" /> Habit
+                </button>
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               
               <div className="flex flex-col gap-2">
-                <label className="text-(--color-muted-text) text-sm font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Quest Name</label>
+                <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Name</label>
                 <input 
                   type="text" 
-                  placeholder="What needs to be done?" 
+                  placeholder={activeTab === 'task' ? "What needs to be done?" : "What habit to build?"} 
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   required
-                  className="bg-(--color-surface) text-(--color-on-surface) h-14 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-primary-60) text-lg break-words"
+                  className="bg-(--color-surface-2) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) focus:ring-1 focus:ring-(--color-primary-60) text-base break-words transition-all placeholder:text-(--color-primary-60)/50"
                   style={{ fontFamily: 'var(--font-roboto)' }}
                 />
               </div>
               
               <div className="flex flex-col gap-2">
-                <label className="text-(--color-muted-text) text-sm font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Tags</label>
-                
-                <div className="flex flex-wrap gap-2 mt-2">
+                <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Tags</label>
+                <div className="flex flex-wrap gap-2 mt-1">
                   {selectedTags.map(tag => (
                     <button
                       key={tag}
@@ -176,7 +249,7 @@ export default function ActionHub() {
                       key={tag}
                       type="button"
                       onClick={() => toggleTag(tag)}
-                      className="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border cursor-pointer transition-colors bg-(--color-surface-2) border-(--color-border) text-(--color-muted-text) hover:text-(--color-on-surface)"
+                      className="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border cursor-pointer transition-colors bg-(--color-surface-2) border-(--color-primary-60) text-(--color-primary-60) hover:text-(--color-on-surface) hover:border-(--color-on-surface)"
                     >
                       + {tag}
                     </button>
@@ -186,39 +259,57 @@ export default function ActionHub() {
 
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 flex flex-col gap-2">
-                  <label className="text-(--color-muted-text) text-sm font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Priority</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'q1_urgent_important', label: 'Q1', color: 'bg-red-500', text: 'text-white' },
-                      { id: 'q2_not_urgent_important', label: 'Q2', color: 'bg-blue-500', text: 'text-white' },
-                      { id: 'q3_urgent_not_important', label: 'Q3', color: 'bg-amber-500', text: 'text-white' },
-                      { id: 'q4_not_urgent_not_important', label: 'Q4', color: 'bg-gray-500', text: 'text-white' },
-                    ].map(q => (
-                      <button
-                        key={q.id}
-                        type="button"
-                        onClick={() => setQuadrant(q.id as QuadrantType)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border transition-all cursor-pointer ${quadrant === q.id ? `${q.color} ${q.text} border-transparent` : 'bg-(--color-surface-2) border-(--color-border) text-(--color-muted-text) hover:border-(--color-primary-60)'}`}
-                      >
-                        {q.label}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>
+                    {activeTab === 'task' ? 'Priority' : 'Frequency'}
+                  </label>
+                  
+                  {activeTab === 'task' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'q1_urgent_important', label: 'Q1', color: 'bg-red-500', text: 'text-white', border: 'border-red-400' },
+                        { id: 'q2_not_urgent_important', label: 'Q2', color: 'bg-blue-500', text: 'text-white', border: 'border-blue-400' },
+                        { id: 'q3_urgent_not_important', label: 'Q3', color: 'bg-amber-500', text: 'text-white', border: 'border-amber-400' },
+                        { id: 'q4_not_urgent_not_important', label: 'Q4', color: 'bg-gray-500', text: 'text-white', border: 'border-gray-400' },
+                      ].map(q => (
+                        <button
+                          key={q.id}
+                          type="button"
+                          onClick={() => setQuadrant(q.id as QuadrantType)}
+                          className={`h-10 rounded-lg text-xs font-bold tracking-wide border transition-all cursor-pointer ${quadrant === q.id ? `${q.color} ${q.text} ${q.border} shadow-lg shadow-${q.color.replace('bg-', '')}/30` : 'bg-(--color-surface-2) border-(--color-primary-60) text-(--color-primary-60) hover:border-(--color-on-surface) hover:text-(--color-on-surface)'}`}
+                        >
+                          {q.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      {['daily', 'weekly', 'monthly'].map(freq => (
+                        <button
+                          key={freq}
+                          type="button"
+                          onClick={() => setFrequency(freq as 'daily' | 'weekly' | 'monthly')}
+                          className={`flex-1 h-10 rounded-lg text-xs font-bold uppercase tracking-wide border transition-all cursor-pointer ${frequency === freq ? 'bg-(--color-primary) text-white border-(--color-primary-60) shadow-lg shadow-(--color-primary)/30' : 'bg-(--color-surface-2) border-(--color-primary-60) text-(--color-primary-60) hover:border-(--color-on-surface) hover:text-(--color-on-surface)'}`}
+                        >
+                          {freq}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex-1 flex flex-col justify-end gap-2">
-                  <label className="text-(--color-muted-text) text-sm font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Reward</label>
+                <div className="flex-1 flex flex-col justify-end gap-2 max-w-[120px]">
+                  <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Reward</label>
                   <input 
                     type="number" 
                     value={reward}
                     onChange={e => setReward(Number(e.target.value))}
                     min={0}
-                    className="bg-(--color-surface) text-(--color-reward) font-bold font-mono h-14 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-primary-60) text-xl w-full"
+                    className="bg-(--color-surface-2) text-amber-500 font-bold font-mono h-12 px-3 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) text-lg w-full text-center transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-(--color-surface-2) p-4 rounded-lg border border-(--color-border)">
+              <div className="flex items-center gap-3 bg-(--color-surface-2) p-3 rounded-lg border border-(--color-primary-60)">
                 <input 
                   type="checkbox" 
                   id="isRequired"
@@ -227,17 +318,17 @@ export default function ActionHub() {
                   className="w-5 h-5 cursor-pointer accent-(--color-primary) rounded"
                 />
                 <label htmlFor="isRequired" className="text-(--color-on-surface) cursor-pointer select-none" style={{ fontFamily: 'var(--font-roboto)' }}>
-                  <span className="block font-bold">Required Quest</span>
-                  <span className="block text-xs text-(--color-muted-text)">Penalized if missed or ignored</span>
+                  <span className="block font-bold text-sm">Required Action</span>
+                  <span className="block text-[10px] text-(--color-primary-60) uppercase tracking-wider">Penalized if missed or ignored</span>
                 </label>
               </div>
 
               <button 
                 type="submit" 
-                className="bg-(--color-primary) text-white h-14 rounded-lg font-bold text-lg hover:bg-(--color-primary-80) transition-colors active:scale-[0.98] cursor-pointer border-none shadow-xl shadow-(--color-primary)/20"
+                className="bg-(--color-primary) text-white h-12 mt-2 rounded-lg font-bold text-lg hover:bg-(--color-primary-80) transition-all active:scale-[0.98] cursor-pointer border-2 border-(--color-primary-60) shadow-[0_4px_15px_rgba(146,92,243,0.4)] hover:shadow-[0_6px_20px_rgba(146,92,243,0.6)]"
                 style={{ fontFamily: 'var(--font-roboto)' }}
               >
-                {editingTask ? 'Save Changes' : 'Forge Quest'}
+                {editingTask ? 'Save Changes' : activeTab === 'task' ? 'Forge Quest' : 'Forge Habit'}
               </button>
             </form>
           </div>

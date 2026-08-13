@@ -10,12 +10,15 @@ import PartyView from './PartyView';
 import SettingsView from './SettingsView';
 import ProfileView from './ProfileView';
 import ActivityTiles from './ActivityTiles';
-import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun } from 'lucide-react';
+import ActiveTimerBar from './ActiveTimerBar';
+import HabitList from './HabitList';
+import HistoryView from './HistoryView';
+import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Dashboard() {
-  const { user, isGuest, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence } = useStore();
+  const { user, isGuest, isAuthLoading, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence, updateTimersElapsed } = useStore();
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -23,6 +26,23 @@ export default function Dashboard() {
     setupPresence();
     return () => teardownPresence();
   }, [user?.id, isGuest, setupPresence, teardownPresence]);
+
+  useEffect(() => {
+    const { fetchUserData } = useStore.getState();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) fetchUserData();
+      else useStore.setState({ isAuthLoading: false });
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) fetchUserData();
+      else useStore.setState({ isAuthLoading: false });
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -42,12 +62,28 @@ export default function Dashboard() {
     };
   }, [timerIsRunning, decrementTimer]);
 
+  useEffect(() => {
+    const multiTimerInterval = setInterval(() => {
+      updateTimersElapsed();
+    }, 1000);
+    return () => clearInterval(multiTimerInterval);
+  }, [updateTimersElapsed]);
+
   const handleLogout = async () => {
     if (user) {
       await supabase.auth.signOut();
     }
     useStore.setState({ user: null, isGuest: false });
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="h-screen w-full bg-(--color-neutral) flex flex-col items-center justify-center gap-4">
+         <div className="w-16 h-16 border-4 border-(--color-primary-60) border-t-(--color-primary) rounded-full animate-spin"></div>
+         <p className="text-(--color-primary-60) font-bold tracking-widest uppercase">Loading Realm...</p>
+      </div>
+    );
+  }
 
   if (!user && !isGuest) {
     return <Auth />;
@@ -79,6 +115,7 @@ export default function Dashboard() {
         <nav className="flex-1 p-4 flex flex-col gap-2">
           <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
           <NavItem view="timer" icon={Timer} label="Focus Timer" />
+          <NavItem view="history" icon={History} label="Chronicles" />
           <NavItem view="store" icon={ShoppingBag} label="Rewards Store" />
           <NavItem view="party" icon={Users} label="Party" />
         </nav>
@@ -164,10 +201,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {taskViewMode === 'matrix' ? <EisenhowerMatrix /> : <TaskList />}
+                  <HabitList />
                 </div>
               )}
               
               {currentView === 'timer' && <FocusTimer />}
+              {currentView === 'history' && <HistoryView />}
               {currentView === 'store' && <StoreView />}
               {currentView === 'party' && <PartyView />}
               {currentView === 'profile' && <ProfileView />}
@@ -183,11 +222,13 @@ export default function Dashboard() {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-around p-2 pb-safe">
         <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
         <NavItem view="timer" icon={Timer} label="Focus" />
+        <NavItem view="history" icon={History} label="History" />
         <NavItem view="store" icon={ShoppingBag} label="Store" />
         <NavItem view="party" icon={Users} label="Party" />
         <NavItem view="settings" icon={Settings} label="Settings" />
       </div>
 
+      <ActiveTimerBar />
       <ActionHub />
     </div>
   );

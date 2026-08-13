@@ -3,8 +3,10 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 
 export type QuadrantType = 'q1_urgent_important' | 'q2_not_urgent_important' | 'q3_urgent_not_important' | 'q4_not_urgent_not_important';
-export type ViewType = 'tasks' | 'timer' | 'store' | 'party' | 'settings' | 'profile';
+export type ViewType = 'tasks' | 'timer' | 'store' | 'party' | 'settings' | 'profile' | 'history';
 export type TaskViewMode = 'matrix' | 'list';
+export type HabitType = 'flexible' | 'timed';
+export type HabitFrequency = 'daily' | 'weekly' | 'monthly';
 
 export interface Task {
   id: string;
@@ -16,6 +18,45 @@ export interface Task {
   is_required: boolean;
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
+  pending_coins?: number;
+  matrix_quadrant?: number;
+}
+
+export interface Habit {
+  id: string;
+  user_id: string;
+  title: string;
+  tags?: string[];
+  habit_type?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  reward_amount: number;
+  is_required: boolean;
+  target_duration_mins?: number;
+  pending_coins: number;
+  streak_count: number;
+  last_completed_at?: string;
+  created_at: string;
+}
+
+export interface TaskHistory {
+  id: string;
+  user_id: string;
+  title: string;
+  item_type: 'task' | 'habit';
+  duration_logged_mins: number;
+  coins_earned: number;
+  completed_at: string;
+}
+
+export interface ActiveTimer {
+  id: string;
+  refId: string;
+  type: 'task' | 'habit';
+  title: string;
+  startTime: number;
+  elapsed: number;
+  isRunning: boolean;
+  multiplier: number;
 }
 
 export interface Reward {
@@ -75,8 +116,11 @@ export interface CoinTransfer {
 interface StoreState {
   user: any | null;
   isGuest: boolean;
+  isAuthLoading: boolean;
   coinBalance: number;
   tasks: Task[];
+  habits: Habit[];
+  taskHistory: TaskHistory[];
   rewards: Reward[];
   profiles: Profile[];
   soundscapes: Soundscape[];
@@ -96,6 +140,7 @@ interface StoreState {
   timerTimeLeft: number;
   timerIsRunning: boolean;
   timerSettings: { work: number; shortBreak: number; longBreak: number; autoStart: boolean; cyclesBeforeLongBreak: number };
+  activeTimers: ActiveTimer[];
   
   // Theme State
   theme: 'habitica-dark' | 'classic-light';
@@ -112,9 +157,12 @@ interface StoreState {
   deleteCustomTag: (tag: string) => void;
   
   setIsGuest: (isGuest: boolean) => void;
+  setIsAuthLoading: (loading: boolean) => void;
   setUser: (user: any) => void;
   setCoinBalance: (balance: number) => void;
   setTasks: (tasks: Task[]) => void;
+  setHabits: (habits: Habit[]) => void;
+  setTaskHistory: (history: TaskHistory[]) => void;
   setRewards: (rewards: Reward[]) => void;
   setProfiles: (profiles: Profile[]) => void;
   setCurrentView: (view: ViewType) => void;
@@ -132,11 +180,15 @@ interface StoreState {
   setEditingTask: (task: Task | null) => void;
   
   addTask: (task: Task) => void;
+  addHabit: (habit: Habit) => void;
   addReward: (reward: Reward) => void;
   deleteReward: (rewardId: string) => Promise<void>;
   updateTaskStatus: (taskId: string, status: 'completed' | 'failed') => void;
+  updateHabitStatus: (habitId: string) => void;
   deleteTask: (taskId: string) => void;
+  deleteHabit: (habitId: string) => void;
   editTask: (taskId: string, updates: Partial<Task>) => void;
+  editHabit: (habitId: string, updates: Partial<Habit>) => void;
   unlockSoundscape: (id: string) => void;
   setActiveSoundscape: (id: string | null) => void;
 
@@ -145,6 +197,12 @@ interface StoreState {
   setTimerIsRunning: (isRunning: boolean) => void;
   setTimerSettings: (settings: Partial<{work: number, shortBreak: number, longBreak: number, autoStart: boolean, cyclesBeforeLongBreak: number}>) => void;
   decrementTimer: () => void;
+  
+  startActiveTimer: (refId: string, type: 'task' | 'habit', title: string, multiplier: number) => void;
+  pauseActiveTimer: (id: string) => void;
+  resumeActiveTimer: (id: string) => void;
+  stopActiveTimer: (id: string) => void;
+  updateTimersElapsed: () => void;
   
   setTheme: (theme: 'habitica-dark' | 'classic-light') => void;
   
@@ -157,8 +215,11 @@ export const useStore = create<StoreState>()(
     (set, get) => ({
       user: null,
       isGuest: false,
+      isAuthLoading: true,
       coinBalance: 0,
       tasks: [],
+      habits: [],
+      taskHistory: [],
       rewards: [],
       profiles: [],
       soundscapes: [
@@ -180,6 +241,7 @@ export const useStore = create<StoreState>()(
       timerTimeLeft: 25 * 60,
       timerIsRunning: false,
       timerSettings: { work: 25, shortBreak: 5, longBreak: 15, autoStart: false, cyclesBeforeLongBreak: 4 },
+      activeTimers: [],
       theme: 'habitica-dark',
       customTags: {
         'Work': '#3B82F6',
@@ -239,6 +301,99 @@ export const useStore = create<StoreState>()(
     }
     return { timerTimeLeft: state.timerTimeLeft - 1 };
   }),
+
+  startActiveTimer: (refId, type, title, multiplier) => set((state) => {
+    // Only allow one active timer for a given task/habit to prevent duplicates
+    if (state.activeTimers.find(t => t.refId === refId)) return state;
+    return {
+      activeTimers: [
+        ...state.activeTimers,
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          refId,
+          type,
+          title,
+          startTime: Date.now(),
+          elapsed: 0,
+          isRunning: true,
+          multiplier
+        }
+      ]
+    };
+  }),
+
+  pauseActiveTimer: (id) => set((state) => ({
+    activeTimers: state.activeTimers.map(t => 
+      t.id === id ? { ...t, isRunning: false } : t
+    )
+  })),
+
+  resumeActiveTimer: (id) => set((state) => ({
+    activeTimers: state.activeTimers.map(t => 
+      t.id === id ? { ...t, isRunning: true, startTime: Date.now() } : t
+    )
+  })),
+
+  stopActiveTimer: (id) => {
+    const state = get();
+    const timer = state.activeTimers.find(t => t.id === id);
+    if (!timer) return;
+    
+    const minutes = Math.floor(timer.elapsed / 60);
+    const coinsEarned = minutes * timer.multiplier;
+    
+    // Optimistic state update
+    set((s) => {
+      const newTimers = s.activeTimers.filter(t => t.id !== id);
+      
+      if (timer.type === 'task') {
+        const tasks = s.tasks.map(t => t.id === timer.refId ? {
+          ...t,
+          pending_coins: (t.pending_coins || 0) + coinsEarned
+        } : t);
+        return { activeTimers: newTimers, tasks };
+      } else {
+        const habits = s.habits.map(h => h.id === timer.refId ? {
+          ...h,
+          pending_coins: (h.pending_coins || 0) + coinsEarned
+        } : h);
+        return { activeTimers: newTimers, habits };
+      }
+    });
+
+    // Update DB
+    if (state.user && coinsEarned > 0) {
+      if (timer.type === 'task') {
+        const task = state.tasks.find(t => t.id === timer.refId);
+        if (task) {
+           supabase.from('tasks').update({ pending_coins: (task.pending_coins || 0) + coinsEarned }).eq('id', timer.refId).then();
+        }
+      } else {
+        const habit = state.habits.find(h => h.id === timer.refId);
+        if (habit) {
+           supabase.from('habits').update({ pending_coins: (habit.pending_coins || 0) + coinsEarned }).eq('id', timer.refId).then();
+        }
+      }
+    }
+  },
+
+  updateTimersElapsed: () => set((state) => {
+    const now = Date.now();
+    let changed = false;
+    const newTimers = state.activeTimers.map(t => {
+      if (t.isRunning) {
+        changed = true;
+        const diff = (now - t.startTime) / 1000;
+        return {
+          ...t,
+          elapsed: t.elapsed + diff,
+          startTime: now
+        };
+      }
+      return t;
+    });
+    return changed ? { activeTimers: newTimers } : state;
+  }),
   
   setTheme: (theme) => {
     set({ theme });
@@ -248,6 +403,7 @@ export const useStore = create<StoreState>()(
   },
   
   addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
+  addHabit: (habit) => set((state) => ({ habits: [...state.habits, habit] })),
   addReward: (reward) => set((state) => ({ rewards: [...state.rewards, reward] })),
   deleteReward: async (rewardId: string) => {
     set((state) => ({ rewards: state.rewards.filter(r => r.id !== rewardId) }));
@@ -256,10 +412,65 @@ export const useStore = create<StoreState>()(
     }
   },
   
+  updateHabitStatus: async (habitId) => {
+    const state = get();
+    const habit = state.habits.find(h => h.id === habitId);
+    if (!habit) return;
+
+    let extraCoins = 0;
+    const activeTimer = state.activeTimers.find(t => t.refId === habitId && t.type === 'habit');
+    if (activeTimer) {
+      const minutes = Math.floor(activeTimer.elapsed / 60);
+      extraCoins = minutes * activeTimer.multiplier;
+      set((s) => ({ activeTimers: s.activeTimers.filter(t => t.id !== activeTimer.id) }));
+    }
+
+    const coinsEarned = habit.pending_coins + extraCoins;
+    const newBalance = state.coinBalance + coinsEarned;
+    
+    // Optimistic update
+    set((state) => ({
+      coinBalance: newBalance,
+      habits: state.habits.map(h => h.id === habitId ? { 
+        ...h, 
+        streak_count: h.streak_count + 1, 
+        pending_coins: 0,
+        last_completed_at: new Date().toISOString()
+      } : h)
+    }));
+
+    if (state.user) {
+      const user = state.user;
+      supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
+      supabase.from('habits').update({ 
+        streak_count: habit.streak_count + 1,
+        pending_coins: 0,
+        last_completed_at: new Date().toISOString()
+      }).eq('id', habitId).then();
+      
+      supabase.from('task_history').insert({
+        user_id: user.id,
+        title: habit.title,
+        item_type: 'habit',
+        coins_earned: coinsEarned,
+      }).then();
+    }
+  },
+
   updateTaskStatus: async (taskId, status) => {
-    const { tasks, user, coinBalance } = get();
-    const task = tasks.find(t => t.id === taskId);
+    const state = get();
+    const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
+
+    let extraCoins = 0;
+    if (status === 'completed') {
+      const activeTimer = state.activeTimers.find(t => t.refId === taskId && t.type === 'task');
+      if (activeTimer) {
+        const minutes = Math.floor(activeTimer.elapsed / 60);
+        extraCoins = minutes * activeTimer.multiplier;
+        set((s) => ({ activeTimers: s.activeTimers.filter(t => t.id !== activeTimer.id) }));
+      }
+    }
 
     // Optimistic update
     set((state) => ({
@@ -267,18 +478,26 @@ export const useStore = create<StoreState>()(
     }));
 
     if (status === 'completed') {
-      const newBalance = coinBalance + task.reward_amount;
+      const totalReward = task.reward_amount + (task.pending_coins || 0) + extraCoins;
+      const newBalance = state.coinBalance + totalReward;
       set({ coinBalance: newBalance });
       
-      if (user) {
+      if (state.user) {
+        const user = state.user;
         // Update DB
-        supabase.from('tasks').update({ status }).eq('id', taskId).then();
+        supabase.from('tasks').update({ status, pending_coins: 0 }).eq('id', taskId).then();
         supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
         supabase.from('transactions').insert({
           user_id: user.id,
-          amount: task.reward_amount,
+          amount: totalReward,
           type: 'reward',
           description: `Completed quest: ${task.title}`
+        }).then();
+        supabase.from('task_history').insert({
+          user_id: user.id,
+          title: task.title,
+          item_type: 'task',
+          coins_earned: totalReward,
         }).then();
       }
 
@@ -296,7 +515,7 @@ export const useStore = create<StoreState>()(
         });
       }
 
-    } else if (user) {
+    } else if (state.user) {
       supabase.from('tasks').update({ status }).eq('id', taskId).then();
     }
   },
@@ -372,7 +591,52 @@ export const useStore = create<StoreState>()(
         .order('created_at', { ascending: false });
         
       if (rewards) set({ rewards });
+
+      const { data: habits } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (habits) {
+        const now = new Date();
+        const updatedHabits = [...habits];
+        
+        for (let i = 0; i < updatedHabits.length; i++) {
+          const habit = updatedHabits[i];
+          if (!habit.last_completed_at) continue;
+          
+          const lastDate = new Date(habit.last_completed_at);
+          let shouldReset = false;
+          
+          if (habit.frequency === 'daily') {
+            shouldReset = now.getDate() !== lastDate.getDate() || now.getMonth() !== lastDate.getMonth() || now.getFullYear() !== lastDate.getFullYear();
+          } else if (habit.frequency === 'weekly') {
+             const lastMonday = new Date(now);
+             lastMonday.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+             lastMonday.setHours(0,0,0,0);
+             shouldReset = lastDate < lastMonday;
+          } else if (habit.frequency === 'monthly') {
+             shouldReset = now.getMonth() !== lastDate.getMonth() || now.getFullYear() !== lastDate.getFullYear();
+          }
+          
+          if (shouldReset) {
+            updatedHabits[i] = { ...habit, last_completed_at: undefined };
+            supabase.from('habits').update({ last_completed_at: null }).eq('id', habit.id).then();
+          }
+        }
+        set({ habits: updatedHabits });
+      }
+      
+      const { data: taskHistory } = await supabase
+        .from('task_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+        
+      if (taskHistory) set({ taskHistory });
     }
+    set({ isAuthLoading: false });
   },
 
   createParty: async (name: string) => {

@@ -13,19 +13,7 @@ export default function Auth() {
   
   const { user, fetchUserData } = useStore();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) fetchUserData();
-    });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) fetchUserData();
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();

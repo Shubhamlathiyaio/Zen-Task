@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, Pencil, Trash2 } from 'lucide-react';
+import { Check, Pencil, Trash2, Play } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
@@ -42,13 +42,14 @@ const QUADRANTS: QuadrantType[] = [
 ];
 
 function SortableTaskItem({ task }: { task: Task }) {
-  const { updateTaskStatus, setEditingTask, deleteTask } = useStore();
+  const { updateTaskStatus, setEditingTask, deleteTask, startActiveTimer } = useStore();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'pan-y'
   };
 
   return (
@@ -94,6 +95,17 @@ function SortableTaskItem({ task }: { task: Task }) {
 
       <div className="flex items-center gap-4 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t border-(--color-border) md:border-none pt-4 md:pt-0 mt-2 md:mt-0" onPointerDown={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={(e) => {
+               e.stopPropagation();
+               const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
+               startActiveTimer(task.id, 'task', task.title, multiplier);
+            }}
+            className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
+            title="Start Focus Timer"
+          >
+            <Play className="w-4 h-4" />
+          </button>
           <button 
             onClick={() => setEditingTask(task)}
             className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"

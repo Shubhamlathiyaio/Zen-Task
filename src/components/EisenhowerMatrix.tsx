@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, Pencil, Trash2 } from 'lucide-react';
+import { Check, Pencil, Trash2, Play } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
@@ -35,13 +35,14 @@ const QUADRANT_BG_TINTS: Record<QuadrantType, string> = {
 
 // Draggable Task Card
 function SortableTaskCard({ task }: { task: Task }) {
-  const { updateTaskStatus, setEditingTask, deleteTask } = useStore();
+  const { updateTaskStatus, setEditingTask, deleteTask, startActiveTimer } = useStore();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'pan-y' // Ensure vertical scrolling works on mobile
   };
 
   return (
@@ -74,6 +75,17 @@ function SortableTaskCard({ task }: { task: Task }) {
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0" onPointerDown={e => e.stopPropagation()}>
+        <button 
+          onClick={(e) => {
+             e.stopPropagation();
+             const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
+             startActiveTimer(task.id, 'task', task.title, multiplier);
+          }}
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100"
+          title="Start Focus Timer"
+        >
+          <Play className="w-4 h-4" />
+        </button>
         <button 
           onClick={() => setEditingTask(task)}
           className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100"
@@ -188,7 +200,7 @@ export default function EisenhowerMatrix() {
   const [activeMobileQuadrant, setActiveMobileQuadrant] = useState<QuadrantType>('q1_urgent_important');
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // Prevent drag on simple clicks
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }), // Prevent drag on simple scroll on mobile
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
