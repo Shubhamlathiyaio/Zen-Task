@@ -218,6 +218,8 @@ interface StoreState {
   setupPresence: () => void;
   teardownPresence: () => void;
   setEditingTask: (task: Task | null) => void;
+  editingHabit: Habit | null;
+  setEditingHabit: (habit: Habit | null) => void;
   
   addTask: (task: Task) => void;
   addHabit: (habit: Habit) => void;
@@ -357,7 +359,10 @@ export const useStore = create<StoreState>()(
   setProfiles: (profiles) => set({ profiles }),
   setCurrentView: (view) => set({ currentView: view }),
   setTaskViewMode: (mode) => set({ taskViewMode: mode }),
+  editingTask: null,
   setEditingTask: (task) => set({ editingTask: task }),
+  editingHabit: null,
+  setEditingHabit: (habit) => set({ editingHabit: habit }),
   
   setTimerMode: (mode) => set({ timerMode: mode }),
   setTimerTimeLeft: (time) => set({ timerTimeLeft: time }),
@@ -836,6 +841,19 @@ export const useStore = create<StoreState>()(
     }
   },
 
+  editHabit: async (habitId: string, updates: Partial<Habit>) => {
+    set((state) => ({
+      habits: state.habits.map(h => h.id === habitId ? { ...h, ...updates } : h)
+    }));
+    if (get().user) {
+      const { error } = await supabase.from('habits').update(updates).eq('id', habitId);
+      if (error) {
+        console.error("Supabase Update Error (Habit):", error);
+        alert(`Failed to save habit update to database: ${error.message}`);
+      }
+    }
+  },
+
   unlockSoundscape: (id) => {
     const { coinBalance, soundscapes } = get();
     const soundscape = soundscapes.find(s => s.id === id);
@@ -1173,19 +1191,23 @@ export const useStore = create<StoreState>()(
         if (persistedState.customTags && Object.keys(persistedState.customTags).length === 0) {
           merged.customTags = currentState.customTags;
         }
-        if (persistedState.timerSettings) {
-          merged.timerTimeLeft = persistedState.timerSettings.work * 60;
-          merged.timerMode = 'work';
-        }
         return merged;
       },
       partialize: (state) => ({ 
         customTags: state.customTags,
         timerSettings: state.timerSettings,
+        timerTimeLeft: state.timerTimeLeft,
+        timerMode: state.timerMode,
+        timerIsRunning: state.timerIsRunning,
+        activeTimers: state.activeTimers,
         theme: state.theme,
         taskViewMode: state.taskViewMode,
         soundscapes: state.soundscapes,
+        quadrantRules: state.quadrantRules,
+        strikeSettings: state.strikeSettings,
         isGuest: state.isGuest,
+        avatarStyle: state.avatarStyle,
+        avatarSeed: state.avatarSeed,
         ...(state.isGuest ? {
           coinBalance: state.coinBalance,
           tasks: state.tasks,

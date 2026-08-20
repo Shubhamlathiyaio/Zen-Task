@@ -5,9 +5,35 @@ import { History, Calendar, Target, Flame, Coins, Filter } from 'lucide-react';
 
 export default function HistoryView() {
   const { taskHistory } = useStore();
-  const [filter, setFilter] = useState<'all' | 'task' | 'habit'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'task' | 'habit'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [customDate, setCustomDate] = useState('');
 
-  const filteredHistory = taskHistory.filter(h => filter === 'all' || h.item_type === filter);
+  const filteredHistory = taskHistory.filter(h => {
+    if (typeFilter !== 'all' && h.item_type !== typeFilter) return false;
+    
+    if (dateFilter !== 'all') {
+      const date = new Date(h.completed_at);
+      const now = new Date();
+      
+      if (dateFilter === 'today') {
+        return date.toDateString() === now.toDateString();
+      }
+
+      if (dateFilter === 'custom' && customDate) {
+        const tzOffset = date.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().split('T')[0];
+        return localISOTime === customDate;
+      }
+      
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (dateFilter === 'week' && diffDays > 7) return false;
+      if (dateFilter === 'month' && diffDays > 30) return false;
+    }
+    return true;
+  });
   
   const totalCoinsEarned = filteredHistory.reduce((sum, item) => sum + item.coins_earned, 0);
 
@@ -35,21 +61,56 @@ export default function HistoryView() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between bg-(--color-surface) p-2 rounded-xl border border-(--color-border) flex-wrap gap-2">
-        <div className="flex items-center gap-2 px-3 text-(--color-muted-text)">
-          <Filter className="w-4 h-4" />
-          <span className="text-sm font-bold uppercase">Filter</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between bg-(--color-surface) p-2 rounded-xl border border-(--color-border) flex-wrap gap-2">
+          <div className="flex items-center gap-2 px-3 text-(--color-muted-text)">
+            <Filter className="w-4 h-4" />
+            <span className="text-sm font-bold uppercase">Type</span>
+          </div>
+          <div className="flex gap-2">
+            {['all', 'task', 'habit'].map(f => (
+              <button
+                key={f}
+                onClick={() => setTypeFilter(f as any)}
+                className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border-none cursor-pointer ${typeFilter === f ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2">
-          {['all', 'task', 'habit'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border-none cursor-pointer ${filter === f ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'}`}
-            >
-              {f}
-            </button>
-          ))}
+
+        <div className="flex items-center justify-between bg-(--color-surface) p-2 rounded-xl border border-(--color-border) flex-wrap gap-2">
+          <div className="flex items-center gap-2 px-3 text-(--color-muted-text)">
+            <Calendar className="w-4 h-4" />
+            <span className="text-sm font-bold uppercase">Time</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+            {[
+              { id: 'today', label: 'Today' },
+              { id: 'week', label: '7 Days' },
+              { id: 'month', label: '30 Days' },
+              { id: 'all', label: 'All Time' }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setDateFilter(f.id as any)}
+                className={`px-3 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border-none cursor-pointer whitespace-nowrap shrink-0 ${dateFilter === f.id ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'}`}
+              >
+                {f.label}
+              </button>
+            ))}
+            <input 
+              type="date"
+              value={customDate}
+              onChange={(e) => {
+                setCustomDate(e.target.value);
+                setDateFilter('custom');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold tracking-wider transition-all border cursor-pointer outline-none shrink-0 h-[36px] ${dateFilter === 'custom' ? 'bg-(--color-primary) text-white border-transparent' : 'bg-transparent text-(--color-muted-text) border-(--color-border) hover:bg-(--color-surface-2)'}`}
+              style={{ fontFamily: 'var(--font-roboto)' }}
+            />
+          </div>
         </div>
       </div>
 

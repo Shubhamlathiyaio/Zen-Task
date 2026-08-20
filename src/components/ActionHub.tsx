@@ -4,6 +4,8 @@ import type { QuadrantType } from '../store/useStore';
 import { Plus, X, Calendar, Target } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getTagColor, getTagTextColor } from '../lib/colors';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function ActionHub() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,9 +18,9 @@ export default function ActionHub() {
   const [frequency, setFrequency] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [reward, setReward] = useState<number | ''>(10);
   const [isRequired, setIsRequired] = useState(true);
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   
-  const { user, isGuest, addTask, addHabit, editTask, customTags, editingTask, setEditingTask, activeTimers } = useStore();
+  const { user, isGuest, addTask, addHabit, editTask, editHabit, customTags, editingTask, setEditingTask, editingHabit, setEditingHabit, activeTimers } = useStore();
   const hasTimers = activeTimers && activeTimers.length > 0;
   
   useEffect(() => {
@@ -29,22 +31,36 @@ export default function ActionHub() {
       setSelectedTags(editingTask.tags || []);
       setQuadrant(editingTask.quadrant);
       setReward(editingTask.reward_amount);
-      setDueDate(editingTask.due_date ? new Date(editingTask.due_date).toISOString().slice(0, 16) : '');
+      setDueDate(editingTask.due_date ? new Date(editingTask.due_date) : null);
       setFrequency(editingTask.frequency || 'none');
       setIsOpen(true);
     }
   }, [editingTask]);
 
+  useEffect(() => {
+    if (editingHabit) {
+      setActiveTab('habit');
+      setTitle(editingHabit.title);
+      setDescription(editingHabit.description || '');
+      setSelectedTags(editingHabit.tags || []);
+      setFrequency(editingHabit.frequency || 'daily');
+      setReward(editingHabit.reward_amount);
+      setIsRequired(editingHabit.is_required !== false);
+      setIsOpen(true);
+    }
+  }, [editingHabit]);
+
   const handleClose = () => {
     setIsOpen(false);
     setEditingTask(null);
+    setEditingHabit(null);
     setTitle('');
     setDescription('');
     setSelectedTags([]);
     setQuadrant('q1_urgent_important');
     setFrequency('none');
     setReward(10);
-    setDueDate('');
+    setDueDate(null);
   };
 
   const availableTags = Object.keys(customTags).length > 0 
@@ -79,17 +95,17 @@ export default function ActionHub() {
     
     if (activeTab === 'task') {
       if (editingTask) {
-        const taskUpdates = {
+        const updates = {
           title,
           description,
           tags: selectedTags,
           quadrant,
+          frequency: frequency as 'none'|'daily'|'weekly'|'monthly',
           reward_amount: reward === '' ? 0 : reward,
+          due_date: dueDate ? dueDate.toISOString() : null,
           is_required: isRequired,
-          due_date: dueDate ? new Date(dueDate).toISOString() : null,
-          frequency,
         };
-        await editTask(editingTask.id, taskUpdates);
+        await editTask(editingTask.id, updates);
         handleClose();
         return;
       }
@@ -101,13 +117,12 @@ export default function ActionHub() {
         description,
         tags: selectedTags,
         quadrant,
+        frequency: frequency as 'none'|'daily'|'weekly'|'monthly',
         reward_amount: reward === '' ? 0 : reward,
+        status: 'pending',
+        due_date: dueDate ? dueDate.toISOString() : undefined,
         is_required: isRequired,
-        status: 'pending' as const,
-        created_at: new Date().toISOString(),
-        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-        frequency,
-        pending_coins: 0
+        streak_count: 0,
       };
       
       if (isGuest) {
@@ -139,7 +154,21 @@ export default function ActionHub() {
         handleClose();
       }
     } else {
-      // Habit creation
+      // Habit creation / update
+      if (editingHabit) {
+        const habitUpdates = {
+          title,
+          description,
+          tags: selectedTags,
+          frequency: frequency as 'daily'|'weekly'|'monthly',
+          reward_amount: reward === '' ? 0 : reward,
+          is_required: isRequired,
+        };
+        await editHabit(editingHabit.id, habitUpdates);
+        handleClose();
+        return;
+      }
+
       const newHabit = {
         id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
         user_id: user?.id || 'guest',
@@ -189,9 +218,7 @@ export default function ActionHub() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className={`fixed left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out bg-(--color-primary) text-white hover:bg-(--color-primary-80) active:scale-95 rounded-full w-[68px] h-[68px] md:w-16 md:h-16 flex items-center justify-center shadow-[0_4px_15px_rgba(146,92,243,0.4)] z-[60] cursor-pointer border-none
-          ${hasTimers ? 'bottom-[108px] md:bottom-20' : 'bottom-3 md:bottom-8'} 
-          md:left-auto md:right-8 md:translate-x-0`}
+        className={`fixed left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out bg-(--color-primary) text-white hover:bg-(--color-primary-80) active:scale-95 rounded-full w-[68px] h-[68px] md:w-16 md:h-16 flex items-center justify-center shadow-[0_4px_15px_rgba(146,92,243,0.4)] z-[60] cursor-pointer border-none bottom-3 md:bottom-8 md:left-auto md:right-8 md:translate-x-0`}
       >
         <Plus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
       </button>
@@ -369,13 +396,19 @@ export default function ActionHub() {
               {activeTab === 'task' && (
                 <div className="flex flex-col gap-2">
                   <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Custom Deadline (Optional)</label>
-                  <input 
-                    type="datetime-local" 
-                    value={dueDate}
-                    onChange={e => setDueDate(e.target.value)}
-                    className="bg-(--color-surface-2) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) text-sm transition-all"
-                    style={{ fontFamily: 'var(--font-roboto)' }}
-                  />
+                  <div className="w-full relative custom-datepicker-wrapper">
+                    <DatePicker 
+                      selected={dueDate}
+                      onChange={(date: Date | null) => setDueDate(date)}
+                      showTimeSelect
+                      timeFormat="h:mm aa"
+                      timeIntervals={15}
+                      timeCaption="Time"
+                      dateFormat="MMMM d, yyyy h:mm aa"
+                      placeholderText="Select deadline..."
+                      className="bg-(--color-surface-2) text-(--color-on-surface) h-12 w-full px-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) text-sm transition-all cursor-pointer"
+                    />
+                  </div>
                   <span className="text-[10px] text-(--color-muted-text) mt-[-4px]">Overrides the default quadrant deadline.</span>
                 </div>
               )}
@@ -399,7 +432,7 @@ export default function ActionHub() {
                 className="bg-(--color-primary) text-white h-12 mt-2 rounded-lg font-bold text-lg hover:bg-(--color-primary-80) transition-all active:scale-[0.98] cursor-pointer border-2 border-(--color-primary-60) shadow-[0_4px_15px_rgba(146,92,243,0.4)] hover:shadow-[0_6px_20px_rgba(146,92,243,0.6)]"
                 style={{ fontFamily: 'var(--font-roboto)' }}
               >
-                {editingTask ? 'Save Changes' : activeTab === 'task' ? 'Forge Quest' : 'Forge Habit'}
+                {editingTask || editingHabit ? 'Save Changes' : activeTab === 'task' ? 'Forge Quest' : 'Forge Habit'}
               </button>
             </form>
           </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { useStore, type Habit } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Trash2, Play, Flame } from 'lucide-react';
+import { Check, Trash2, Play, Flame, Pencil } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
@@ -87,7 +87,18 @@ export default function HabitList() {
                     <Play className="w-4 h-4" />
                   </button>
                   <button 
-                    onClick={() => deleteHabit(habit.id)}
+                    onClick={() => useStore.getState().setEditingHabit(habit)}
+                    className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
+                    title="Edit Habit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this habit?')) {
+                        deleteHabit(habit.id);
+                      }
+                    }}
                     className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
                     title="Delete Habit"
                   >

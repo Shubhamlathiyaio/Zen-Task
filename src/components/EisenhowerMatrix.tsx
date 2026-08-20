@@ -70,21 +70,21 @@ function SortableTaskCard({ task, deadlineMs }: { task: Task, deadlineMs: number
       style={style}
       {...attributes} 
       {...listeners}
-      className={`group relative bg-(--color-surface-2) p-3 pl-5 rounded-md flex justify-between items-start gap-2 shadow-sm border ${isNearDeadline ? 'border-red-500/50 shadow-red-500/10 bg-red-500/5' : 'border-(--color-border)'} hover:shadow-md transition-all cursor-grab active:cursor-grabbing text-left mb-2`}
+      className={`group relative bg-(--color-surface-2) p-1.5 md:p-3 pl-3.5 md:pl-5 rounded-md flex flex-col md:flex-row justify-between items-start md:items-center gap-1.5 md:gap-2 shadow-sm border ${isNearDeadline ? 'border-red-500/50 shadow-red-500/10 bg-red-500/5' : 'border-(--color-border)'} hover:shadow-md transition-all cursor-grab active:cursor-grabbing text-left mb-1.5 md:mb-2`}
     >
-      <div className={`absolute left-2 top-1/2 -translate-y-1/2 w-1 h-3/5 rounded-full ${QUADRANT_COLORS_BG[task.quadrant]}`} />
+      <div className={`absolute left-1 md:left-2 top-1/2 -translate-y-1/2 w-1 h-3/5 rounded-full ${QUADRANT_COLORS_BG[task.quadrant]}`} />
       
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="text-(--color-on-surface) font-medium break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{task.title}</span>
+      <div className="flex flex-col min-w-0 flex-1 w-full md:w-auto">
+        <span className="text-(--color-on-surface) font-medium break-words text-sm md:text-base" style={{ fontFamily: 'var(--font-roboto)' }}>{task.title}</span>
         {task.description && (
-          <p className="text-xs text-(--color-muted-text) mt-1 mb-0 break-words whitespace-pre-wrap">{task.description}</p>
+          <p className="text-[10px] md:text-xs text-(--color-muted-text) mt-0.5 md:mt-1 mb-0 break-words whitespace-pre-wrap line-clamp-2 md:line-clamp-none">{task.description}</p>
         )}
         
-        <div className="flex gap-2 mt-2 flex-wrap items-center">
+        <div className="flex gap-1 md:gap-2 mt-1 md:mt-2 flex-wrap items-center">
           {task.tags?.map(tag => (
             <span 
               key={tag} 
-              className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border whitespace-nowrap"
+              className="text-[9px] md:text-[10px] uppercase tracking-wider px-1 md:px-2 py-0.5 rounded-full font-bold border whitespace-nowrap"
               style={{
                 backgroundColor: getTagColor(tag),
                 color: getTagTextColor(tag),
@@ -95,49 +95,56 @@ function SortableTaskCard({ task, deadlineMs }: { task: Task, deadlineMs: number
             </span>
           ))}
           {task.is_required && (
-            <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border border-red-500/20 bg-red-500/10 text-red-500 whitespace-nowrap">
+            <span className="text-[9px] md:text-[10px] uppercase tracking-wider px-1 md:px-2 py-0.5 rounded-full font-bold border border-red-500/20 bg-red-500/10 text-red-500 whitespace-nowrap">
               Required
             </span>
           )}
           {deadlineMs !== Infinity && (
-            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border flex items-center gap-1 whitespace-nowrap ${isNearDeadline ? 'bg-red-500/20 text-red-500 border-red-500/30' : 'bg-(--color-primary)/10 text-(--color-primary) border-(--color-primary)/20'}`}>
+            <span className={`text-[9px] md:text-[10px] uppercase tracking-wider px-1 md:px-2 py-0.5 rounded-full font-bold border flex items-center gap-1 whitespace-nowrap ${isNearDeadline ? 'bg-red-500/20 text-red-500 border-red-500/30' : 'bg-(--color-primary)/10 text-(--color-primary) border-(--color-primary)/20'}`}>
               ⏱️ {deadlineString}
             </span>
           )}
         </div>
       </div>
       
-      <div className="flex items-center gap-2 shrink-0" onPointerDown={e => e.stopPropagation()}>
+      <div className="flex items-center gap-2 shrink-0 self-end md:self-auto mt-1 md:mt-0 pt-1 md:pt-0 border-t md:border-t-0 border-(--color-border) w-full md:w-auto justify-between md:justify-end" onPointerDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 md:gap-2">
+          <button 
+            onClick={(e) => {
+               e.stopPropagation();
+               const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
+               startActiveTimer(task.id, 'task', task.title, multiplier);
+            }}
+            className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100"
+            title="Start Timer"
+          >
+            <Play className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setEditingTask(task); }}
+            className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100"
+            title="Edit"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (window.confirm('Are you sure you want to delete this quest?')) {
+                deleteTask(task.id); 
+              }
+            }}
+            className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 mr-1 md:mr-2"
+            title="Delete Quest"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <span className="text-(--color-reward) font-bold text-xs md:text-sm">
+            +{task.reward_amount}
+          </span>
+        </div>
         <button 
-          onClick={(e) => {
-             e.stopPropagation();
-             const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
-             startActiveTimer(task.id, 'task', task.title, multiplier);
-          }}
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100"
-          title="Start Timer"
-        >
-          <Play className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); setEditingTask(task); }}
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100"
-          title="Edit"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-          className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 mr-2"
-          title="Delete Quest"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-        <span className="text-(--color-reward) font-bold text-sm">
-          +{task.reward_amount}
-        </span>
-        <button 
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-10 h-10 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group"
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-all cursor-pointer z-20 bg-transparent border-none group"
           onClick={(e) => {
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const x = (rect.left + rect.width / 2) / window.innerWidth;
@@ -157,8 +164,8 @@ function SortableTaskCard({ task, deadlineMs }: { task: Task, deadlineMs: number
           }}
           title="Complete Quest"
         >
-          <div className="w-8 h-8 rounded-md flex items-center justify-center border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
-            <Check className="w-5 h-5 text-transparent group-hover:text-white" strokeWidth={4} />
+          <div className="w-6 h-6 md:w-8 md:h-8 rounded-md flex items-center justify-center border-2 md:border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
+            <Check className="w-3.5 h-3.5 md:w-5 md:h-5 text-transparent group-hover:text-white" strokeWidth={4} />
           </div>
         </button>
       </div>

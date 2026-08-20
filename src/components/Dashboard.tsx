@@ -94,7 +94,7 @@ export default function Dashboard() {
   const NavItem = ({ view, icon: Icon, label }: { view: any, icon: any, label: string }) => (
     <button
       onClick={() => setCurrentView(view)}
-      className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 p-2 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
+      className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-1.5 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
         currentView === view 
           ? 'bg-(--color-primary) text-white shadow-md shadow-(--color-primary)/20' 
           : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'
@@ -171,7 +171,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar pb-[72px] md:pb-8">
+        <div className={`p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar ${activeTimers && activeTimers.length > 0 ? 'pb-[164px]' : 'pb-[100px]'} md:pb-8`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -218,7 +218,7 @@ export default function Dashboard() {
       </main>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 p-2 pb-safe h-[72px]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 py-1 pb-safe h-[60px] items-center">
         <div className="flex w-[40%] justify-around">
           <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
           <NavItem view="timer" icon={Timer} label="Focus" />

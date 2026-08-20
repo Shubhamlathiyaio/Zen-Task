@@ -42,7 +42,7 @@ const QUADRANTS: QuadrantType[] = [
 ];
 
 function SortableTaskItem({ task, deadlineMs }: { task: Task, deadlineMs: number }) {
-  const { updateTaskStatus, setEditingTask, deleteTask } = useStore();
+  const { updateTaskStatus, setEditingTask, deleteTask, startActiveTimer } = useStore();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
@@ -77,21 +77,21 @@ function SortableTaskItem({ task, deadlineMs }: { task: Task, deadlineMs: number
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-(--color-neutral) p-4 pl-6 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm border ${isNearDeadline ? 'border-red-500/50 bg-red-500/5' : 'border-(--color-border)'} hover:shadow-md transition-shadow relative z-10 cursor-grab active:cursor-grabbing mb-3`}
+      className={`bg-(--color-neutral) p-2.5 md:p-4 pl-4 md:pl-6 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-1.5 md:gap-4 shadow-sm border ${isNearDeadline ? 'border-red-500/50 bg-red-500/5' : 'border-(--color-border)'} hover:shadow-md transition-shadow relative z-10 cursor-grab active:cursor-grabbing mb-2.5 md:mb-4`}
     >
-      <div className={`absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1/2 rounded-full ${QUADRANT_COLORS_BG[task.quadrant]}`} />
-      <div className="flex items-center gap-3 w-full md:w-auto flex-1 min-w-0">
+      <div className={`absolute left-1.5 md:left-2 top-1/2 -translate-y-1/2 w-1 md:w-1.5 h-1/2 rounded-full ${QUADRANT_COLORS_BG[task.quadrant]}`} />
+      <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto flex-1 min-w-0">
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="text-(--color-on-surface) font-bold text-lg break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{task.title}</span>
+          <span className="text-(--color-on-surface) font-bold text-sm md:text-lg break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{task.title}</span>
           {task.description && (
-            <p className="text-sm text-(--color-muted-text) mt-1 mb-0 break-words whitespace-pre-wrap">{task.description}</p>
+            <p className="text-[11px] md:text-sm text-(--color-muted-text) mt-0.5 md:mt-1 mb-0 break-words whitespace-pre-wrap">{task.description}</p>
           )}
           
-          <div className="flex gap-2 mt-2 flex-wrap items-center">
+          <div className="flex gap-1.5 md:gap-2 mt-1.5 md:mt-2 flex-wrap items-center">
             {task.tags && task.tags.map(tag => (
               <span 
                 key={tag} 
-                className="text-[10px] uppercase tracking-wider px-3 py-1 rounded-full font-bold border whitespace-nowrap"
+                className="text-[9px] md:text-[10px] uppercase tracking-wider px-1.5 md:px-3 py-0.5 md:py-1 rounded-full font-bold border whitespace-nowrap"
                 style={{
                   backgroundColor: getTagColor(tag),
                   color: getTagTextColor(tag),
@@ -103,17 +103,17 @@ function SortableTaskItem({ task, deadlineMs }: { task: Task, deadlineMs: number
             ))}
             
             {task.is_required && (
-              <span className="text-[10px] uppercase tracking-wider bg-red-500/10 text-red-400 px-3 py-1 rounded-full font-bold border border-red-500/20 whitespace-nowrap">
+              <span className="text-[9px] md:text-[10px] uppercase tracking-wider bg-red-500/10 text-red-400 px-1.5 md:px-3 py-0.5 md:py-1 rounded-full font-bold border border-red-500/20 whitespace-nowrap">
                 Required
               </span>
             )}
             
-            <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold bg-(--color-surface-2) text-(--color-muted-text) whitespace-nowrap">
+            <span className="text-[9px] md:text-[10px] uppercase tracking-wider px-1.5 md:px-3 py-0.5 md:py-1 rounded-full font-bold bg-(--color-surface-2) text-(--color-muted-text) whitespace-nowrap">
               {QUADRANT_TITLES[task.quadrant]}
             </span>
 
             {deadlineMs !== Infinity && (
-              <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold flex items-center gap-1 ${isNearDeadline ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-(--color-primary)/10 text-(--color-primary) border border-(--color-primary)/20'}`}>
+              <span className={`text-[9px] md:text-[10px] uppercase tracking-wider px-1.5 md:px-3 py-0.5 md:py-1 rounded-full font-bold flex items-center gap-1 ${isNearDeadline ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-(--color-primary)/10 text-(--color-primary) border border-(--color-primary)/20'}`}>
                 ⏱️ {deadlineString}
               </span>
             )}
@@ -121,24 +121,40 @@ function SortableTaskItem({ task, deadlineMs }: { task: Task, deadlineMs: number
         </div>
       </div>
 
-      <div className="flex items-center gap-4 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t border-(--color-border) md:border-none pt-4 md:pt-0 mt-2 md:mt-0" onPointerDown={e => e.stopPropagation()}>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 md:gap-4 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-end border-t border-(--color-border) md:border-none pt-2 md:pt-0 mt-1.5 md:mt-0" onPointerDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 md:gap-2">
+          <button 
+            onClick={(e) => {
+               e.stopPropagation();
+               const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
+               startActiveTimer(task.id, 'task', task.title, multiplier);
+            }}
+            className="text-(--color-muted-text) hover:text-(--color-primary) p-1.5 md:p-2 rounded-md transition-colors cursor-pointer"
+            title="Start Timer"
+          >
+            <Play className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
           <button 
             onClick={(e) => { e.stopPropagation(); setEditingTask(task); }}
-            className="text-(--color-muted-text) hover:text-(--color-primary) p-2 rounded-md transition-colors cursor-pointer"
+            className="text-(--color-muted-text) hover:text-(--color-primary) p-1.5 md:p-2 rounded-md transition-colors cursor-pointer"
           >
-            <Pencil className="w-5 h-5" />
+            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           <button 
-            onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-            className="text-(--color-muted-text) hover:text-red-500 p-2 rounded-md transition-colors cursor-pointer"
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (window.confirm('Are you sure you want to delete this quest?')) {
+                deleteTask(task.id); 
+              }
+            }}
+            className="text-(--color-muted-text) hover:text-red-500 p-1.5 md:p-2 rounded-md transition-colors cursor-pointer"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
           </button>
-          <span className="text-(--color-reward) font-bold text-lg px-2 ml-2">+{task.reward_amount}</span>
+          <span className="text-(--color-reward) font-bold text-base md:text-lg px-2 ml-1 md:ml-2">+{task.reward_amount}</span>
         </div>
         <button 
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-12 h-12 flex items-center justify-center transition-all cursor-pointer bg-transparent border-none group"
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) rounded-md w-10 h-10 md:w-12 md:h-12 flex items-center justify-center transition-all cursor-pointer bg-transparent border-none group"
           onPointerDown={(e) => e.stopPropagation()} 
           onClick={(e) => {
             e.stopPropagation();
@@ -162,8 +178,8 @@ function SortableTaskItem({ task, deadlineMs }: { task: Task, deadlineMs: number
           }}
           title="Complete Quest"
         >
-          <div className="w-8 h-8 rounded-md flex items-center justify-center border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
-            <Check className="w-5 h-5 text-transparent group-hover:text-white" strokeWidth={4} />
+          <div className="w-6 h-6 md:w-8 md:h-8 rounded-md flex items-center justify-center border-2 md:border-[3px] border-current group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90 transition-all">
+            <Check className="w-4 h-4 md:w-5 md:h-5 text-transparent group-hover:text-white" strokeWidth={4} />
           </div>
         </button>
       </div>
