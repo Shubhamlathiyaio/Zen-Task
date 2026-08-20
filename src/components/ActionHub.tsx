@@ -9,22 +9,28 @@ export default function ActionHub() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'task' | 'habit'>('task');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [quadrant, setQuadrant] = useState<QuadrantType>('q1_urgent_important');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [reward, setReward] = useState(10);
+  const [frequency, setFrequency] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
+  const [reward, setReward] = useState<number | ''>(10);
   const [isRequired, setIsRequired] = useState(true);
+  const [dueDate, setDueDate] = useState('');
   
-  const { user, isGuest, addTask, addHabit, editTask, customTags, editingTask, setEditingTask } = useStore();
+  const { user, isGuest, addTask, addHabit, editTask, customTags, editingTask, setEditingTask, activeTimers } = useStore();
+  const hasTimers = activeTimers && activeTimers.length > 0;
   
   useEffect(() => {
     if (editingTask) {
       setActiveTab('task');
       setTitle(editingTask.title);
+      setDescription(editingTask.description || '');
       setSelectedTags(editingTask.tags || []);
       setQuadrant(editingTask.quadrant);
       setReward(editingTask.reward_amount);
+      setDueDate(editingTask.due_date ? new Date(editingTask.due_date).toISOString().slice(0, 16) : '');
+      setFrequency(editingTask.frequency || 'none');
       setIsOpen(true);
     }
   }, [editingTask]);
@@ -33,10 +39,12 @@ export default function ActionHub() {
     setIsOpen(false);
     setEditingTask(null);
     setTitle('');
+    setDescription('');
     setSelectedTags([]);
     setQuadrant('q1_urgent_important');
-    setFrequency('daily');
+    setFrequency('none');
     setReward(10);
+    setDueDate('');
   };
 
   const availableTags = Object.keys(customTags).length > 0 
@@ -70,24 +78,37 @@ export default function ActionHub() {
     }
     
     if (activeTab === 'task') {
+      if (editingTask) {
+        const taskUpdates = {
+          title,
+          description,
+          tags: selectedTags,
+          quadrant,
+          reward_amount: reward === '' ? 0 : reward,
+          is_required: isRequired,
+          due_date: dueDate ? new Date(dueDate).toISOString() : null,
+          frequency,
+        };
+        await editTask(editingTask.id, taskUpdates);
+        handleClose();
+        return;
+      }
+
       const newTask = {
         id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
         user_id: user?.id || 'guest',
         title,
+        description,
         tags: selectedTags,
         quadrant,
-        reward_amount: reward,
+        reward_amount: reward === '' ? 0 : reward,
         is_required: isRequired,
         status: 'pending' as const,
         created_at: new Date().toISOString(),
+        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+        frequency,
         pending_coins: 0
       };
-      
-      if (editingTask) {
-        await editTask(editingTask.id, newTask);
-        handleClose();
-        return;
-      }
       
       if (isGuest) {
         addTask(newTask as any);
@@ -98,10 +119,13 @@ export default function ActionHub() {
       const { data, error } = await supabase.from('tasks').insert({
          user_id: user!.id,
          title,
+         description,
          tags: selectedTags,
          quadrant,
-         reward_amount: reward,
-         is_required: isRequired
+         reward_amount: reward === '' ? 0 : reward,
+         is_required: isRequired,
+         due_date: dueDate ? new Date(dueDate).toISOString() : null,
+         frequency
       }).select().single();
       
       if (error) {
@@ -120,9 +144,10 @@ export default function ActionHub() {
         id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
         user_id: user?.id || 'guest',
         title,
+        description,
         tags: selectedTags,
         frequency,
-        reward_amount: reward,
+        reward_amount: reward === '' ? 0 : reward,
         is_required: isRequired,
         streak_count: 0,
         pending_coins: 0,
@@ -138,9 +163,10 @@ export default function ActionHub() {
       const { data, error } = await supabase.from('habits').insert({
          user_id: user!.id,
          title,
+         description,
          tags: selectedTags,
          frequency,
-         reward_amount: reward,
+         reward_amount: reward === '' ? 0 : reward,
          is_required: isRequired,
          streak_count: 0,
          pending_coins: 0
@@ -163,11 +189,11 @@ export default function ActionHub() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-(--color-primary) text-white hover:bg-(--color-primary-80) transition-transform active:scale-95 rounded-full h-14 md:h-16 px-6 md:px-8 flex items-center justify-center font-bold text-lg shadow-xl shadow-(--color-primary)/30 z-50 cursor-pointer border-none"
-        style={{ fontFamily: 'var(--font-roboto)' }}
+        className={`fixed left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out bg-(--color-primary) text-white hover:bg-(--color-primary-80) active:scale-95 rounded-full w-[68px] h-[68px] md:w-16 md:h-16 flex items-center justify-center shadow-[0_4px_15px_rgba(146,92,243,0.4)] z-[60] cursor-pointer border-none
+          ${hasTimers ? 'bottom-[108px] md:bottom-20' : 'bottom-3 md:bottom-8'} 
+          md:left-auto md:right-8 md:translate-x-0`}
       >
-        <Plus className="w-6 h-6 mr-2" />
-        Add Action
+        <Plus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={2.5} />
       </button>
 
       {isOpen && (
@@ -222,6 +248,17 @@ export default function ActionHub() {
                   onChange={e => setTitle(e.target.value)}
                   required
                   className="bg-(--color-surface-2) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) focus:ring-1 focus:ring-(--color-primary-60) text-base break-words transition-all placeholder:text-(--color-primary-60)/50"
+                  style={{ fontFamily: 'var(--font-roboto)' }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Details (Optional)</label>
+                <textarea 
+                  placeholder="Add notes, steps, or extra context..." 
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  className="bg-(--color-surface-2) text-(--color-on-surface) p-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) focus:ring-1 focus:ring-(--color-primary-60) text-sm break-words transition-all placeholder:text-(--color-primary-60)/50 min-h-[80px] resize-y"
                   style={{ fontFamily: 'var(--font-roboto)' }}
                 />
               </div>
@@ -295,6 +332,26 @@ export default function ActionHub() {
                       ))}
                     </div>
                   )}
+                  
+                  {activeTab === 'task' && (
+                    <>
+                      <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider mt-2" style={{ fontFamily: 'var(--font-roboto)' }}>
+                        Repeat Automatically?
+                      </label>
+                      <div className="flex gap-2">
+                        {['none', 'daily', 'weekly', 'monthly'].map(freq => (
+                          <button
+                            key={freq}
+                            type="button"
+                            onClick={() => setFrequency(freq as any)}
+                            className={`flex-1 h-10 rounded-lg text-xs font-bold uppercase tracking-wide border transition-all cursor-pointer ${frequency === freq ? 'bg-(--color-primary) text-white border-(--color-primary-60) shadow-lg shadow-(--color-primary)/30' : 'bg-(--color-surface-2) border-(--color-primary-60) text-(--color-primary-60) hover:border-(--color-on-surface) hover:text-(--color-on-surface)'}`}
+                          >
+                            {freq}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex-1 flex flex-col justify-end gap-2 max-w-[120px]">
@@ -302,12 +359,26 @@ export default function ActionHub() {
                   <input 
                     type="number" 
                     value={reward}
-                    onChange={e => setReward(Number(e.target.value))}
+                    onChange={e => setReward(e.target.value === '' ? '' : Number(e.target.value))}
                     min={0}
                     className="bg-(--color-surface-2) text-amber-500 font-bold font-mono h-12 px-3 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) text-lg w-full text-center transition-all"
                   />
                 </div>
               </div>
+
+              {activeTab === 'task' && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-(--color-primary-60) text-xs font-bold uppercase tracking-wider" style={{ fontFamily: 'var(--font-roboto)' }}>Custom Deadline (Optional)</label>
+                  <input 
+                    type="datetime-local" 
+                    value={dueDate}
+                    onChange={e => setDueDate(e.target.value)}
+                    className="bg-(--color-surface-2) text-(--color-on-surface) h-12 px-4 rounded-lg border border-(--color-primary-60) focus:outline-none focus:border-(--color-primary-60) text-sm transition-all"
+                    style={{ fontFamily: 'var(--font-roboto)' }}
+                  />
+                  <span className="text-[10px] text-(--color-muted-text) mt-[-4px]">Overrides the default quadrant deadline.</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 bg-(--color-surface-2) p-3 rounded-lg border border-(--color-primary-60)">
                 <input 

@@ -12,20 +12,26 @@ export interface Task {
   id: string;
   user_id: string;
   title: string;
+  description?: string;
   tags: string[];
   quadrant: QuadrantType;
   reward_amount: number;
   is_required: boolean;
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
+  completed_at?: string | null;
+  due_date?: string | null;
+  frequency?: 'none' | 'daily' | 'weekly' | 'monthly';
   pending_coins?: number;
   matrix_quadrant?: number;
+  strike_count?: number;
 }
 
 export interface Habit {
   id: string;
   user_id: string;
   title: string;
+  description?: string;
   tags?: string[];
   habit_type?: string;
   frequency: 'daily' | 'weekly' | 'monthly';
@@ -36,6 +42,7 @@ export interface Habit {
   streak_count: number;
   last_completed_at?: string;
   created_at: string;
+  strike_count?: number;
 }
 
 export interface TaskHistory {
@@ -112,6 +119,10 @@ export interface CoinTransfer {
   created_at: string;
 }
 
+export interface QuadrantRule {
+  deadline: 'today' | 'week' | 'month' | 'none' | '10s' | '20s' | '30s' | '40s';
+  penalty: number;
+}
 
 interface StoreState {
   user: any | null;
@@ -135,12 +146,41 @@ interface StoreState {
   pendingTransfers: CoinTransfer[];
   onlineCount: number;
   
+  // Filter State
+  taskFilterTag: string | null;
+  taskFilterTimeline: 'all' | 'daily' | 'weekly' | 'monthly';
+  taskFilterPriority: boolean;
+  setTaskFilterTag: (tag: string | null) => void;
+  setTaskFilterTimeline: (timeline: 'all' | 'daily' | 'weekly' | 'monthly') => void;
+  setTaskFilterPriority: (priority: boolean) => void;
+
+  // Quadrant Rules
+  quadrantRules: Record<string, QuadrantRule>;
+  setQuadrantRule: (quadrant: string, rule: Partial<QuadrantRule>) => void;
+  evaluatePenalties: () => void;
+  
   // Timer State
   timerMode: 'work' | 'shortBreak' | 'longBreak';
   timerTimeLeft: number;
+  
+  // Notifications
+  notifications: { id: string, message: string, type?: 'info' | 'error' | 'warning' }[];
+  addNotification: (message: string, type?: 'info' | 'error' | 'warning') => void;
+  removeNotification: (id: string) => void;
+  
+  // Penalty Alert Modal
+  penaltyAlert: { titles: string[], totalLost: number, deletedTitles?: string[] } | null;
+  setPenaltyAlert: (alert: { titles: string[], totalLost: number, deletedTitles?: string[] } | null) => void;
+  
+  // Strike Settings
+  strikeSettings: { taskLimit: number; habitLimit: number };
+  setStrikeSettings: (settings: { taskLimit?: number; habitLimit?: number }) => void;
+  
   timerIsRunning: boolean;
   timerSettings: { work: number; shortBreak: number; longBreak: number; autoStart: boolean; cyclesBeforeLongBreak: number };
   activeTimers: ActiveTimer[];
+  activePomodoroTaskId: string | null;
+  setActivePomodoroTaskId: (id: string | null) => void;
   
   // Theme State
   theme: 'habitica-dark' | 'classic-light';
@@ -229,6 +269,12 @@ export const useStore = create<StoreState>()(
       activeSoundscape: null,
       currentView: 'tasks',
       taskViewMode: 'matrix',
+      taskFilterTag: null,
+      taskFilterTimeline: 'all',
+      taskFilterPriority: false,
+      setTaskFilterTag: (tag) => set({ taskFilterTag: tag }),
+      setTaskFilterTimeline: (timeline) => set({ taskFilterTimeline: timeline }),
+      setTaskFilterPriority: (priority) => set({ taskFilterPriority: priority }),
       activeParty: null,
       partyMembers: [],
       tavernActivities: [],
@@ -242,6 +288,8 @@ export const useStore = create<StoreState>()(
       timerIsRunning: false,
       timerSettings: { work: 25, shortBreak: 5, longBreak: 15, autoStart: false, cyclesBeforeLongBreak: 4 },
       activeTimers: [],
+      activePomodoroTaskId: null,
+      setActivePomodoroTaskId: (id) => set({ activePomodoroTaskId: id }),
       theme: 'habitica-dark',
       customTags: {
         'Work': '#3B82F6',
@@ -251,6 +299,48 @@ export const useStore = create<StoreState>()(
         'Social': '#EC4899',
         'Personal': '#64748B'
       },
+      quadrantRules: {
+        'q1_urgent_important': { deadline: 'today', penalty: 100 },
+        'q2_not_urgent_important': { deadline: 'week', penalty: 50 },
+        'q3_urgent_not_important': { deadline: 'month', penalty: 10 },
+        'q4_not_urgent_not_important': { deadline: 'none', penalty: 5 },
+      },
+      
+      notifications: [],
+      addNotification: (message, type = 'info') => {
+        const id = Math.random().toString(36).substring(2, 9);
+        set((state) => ({ notifications: [...state.notifications, { id, message, type }] }));
+        setTimeout(() => {
+          get().removeNotification(id);
+        }, 5000);
+      },
+      removeNotification: (id) => set((state) => ({ notifications: state.notifications.filter(n => n.id !== id) })),
+      
+      penaltyAlert: null,
+      setPenaltyAlert: (alert) => set({ penaltyAlert: alert }),
+      
+      strikeSettings: { taskLimit: 3, habitLimit: 3 },
+      setStrikeSettings: (settings) => set((state) => ({ strikeSettings: { ...state.strikeSettings, ...settings } })),
+
+      setQuadrantRule: (quadrant, rule) => set((state) => {
+        const newTime = new Date().toISOString();
+        const tasksToReset = state.tasks.filter(t => t.quadrant === quadrant).map(t => t.id);
+        
+        if (state.user && tasksToReset.length > 0) {
+          supabase.from('tasks').update({ created_at: newTime }).in('id', tasksToReset).then();
+        }
+
+        return {
+          quadrantRules: {
+            ...state.quadrantRules,
+            [quadrant]: {
+              ...state.quadrantRules[quadrant],
+              ...rule
+            }
+          },
+          tasks: state.tasks.map(t => t.quadrant === quadrant ? { ...t, created_at: newTime } : t)
+        };
+      }),
 
       setCustomTagColor: (tag, color) => set((state) => ({ customTags: { ...state.customTags, [tag]: color } })),
       deleteCustomTag: (tag) => set((state) => {
@@ -353,11 +443,24 @@ export const useStore = create<StoreState>()(
         } : t);
         return { activeTimers: newTimers, tasks };
       } else {
-        const habits = s.habits.map(h => h.id === timer.refId ? {
-          ...h,
-          pending_coins: (h.pending_coins || 0) + coinsEarned
-        } : h);
-        return { activeTimers: newTimers, habits };
+        // For habits, add directly to balance instead of pending
+        const newBalance = s.coinBalance + coinsEarned;
+        
+        // Also add to history
+        if (coinsEarned > 0) {
+          const historyEntry = {
+            id: Math.random().toString(36).substring(2, 9),
+            user_id: s.user?.id || 'guest',
+            item_id: timer.refId,
+            item_type: 'habit',
+            title: timer.title,
+            coins_earned: coinsEarned,
+            completed_at: new Date().toISOString()
+          };
+          return { activeTimers: newTimers, coinBalance: newBalance, taskHistory: [historyEntry, ...s.taskHistory] };
+        }
+        
+        return { activeTimers: newTimers, coinBalance: newBalance };
       }
     });
 
@@ -369,10 +472,16 @@ export const useStore = create<StoreState>()(
            supabase.from('tasks').update({ pending_coins: (task.pending_coins || 0) + coinsEarned }).eq('id', timer.refId).then();
         }
       } else {
-        const habit = state.habits.find(h => h.id === timer.refId);
-        if (habit) {
-           supabase.from('habits').update({ pending_coins: (habit.pending_coins || 0) + coinsEarned }).eq('id', timer.refId).then();
-        }
+        // For habits, update user balance and insert history
+        const newBalance = state.coinBalance + coinsEarned;
+        supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', state.user.id).then();
+        supabase.from('task_history').insert({
+          user_id: state.user.id,
+          item_id: timer.refId,
+          item_type: 'habit',
+          title: timer.title,
+          coins_earned: coinsEarned
+        }).then();
       }
     }
   },
@@ -394,6 +503,192 @@ export const useStore = create<StoreState>()(
     });
     return changed ? { activeTimers: newTimers } : state;
   }),
+  
+  evaluatePenalties: () => {
+    const state = get();
+    
+    const now = Date.now();
+    let coinsLost = 0;
+    const tasksToReset: { id: string, strikes: number }[] = [];
+    const tasksToDelete: string[] = [];
+    const habitsToReset: { id: string, strikes: number }[] = [];
+    const habitsToDelete: string[] = [];
+    const tasksToRespawn: string[] = [];
+    const historyEntries: any[] = [];
+    const deletedTitles: string[] = [];
+    
+    // Evaluate Tasks
+    if (state.tasks && state.tasks.length > 0) {
+      state.tasks.forEach(task => {
+        // 1. Recurring task respawn check
+        if (task.status === 'completed' && task.frequency && task.frequency !== 'none' && task.completed_at) {
+          let intervalMs = 0;
+          switch (task.frequency) {
+            case 'daily': intervalMs = 24 * 60 * 60 * 1000; break;
+            case 'weekly': intervalMs = 7 * 24 * 60 * 60 * 1000; break;
+            case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break;
+          }
+          if (now - new Date(task.completed_at).getTime() > intervalMs) {
+            tasksToRespawn.push(task.id);
+          }
+          return;
+        }
+        
+        // 2. Penalty check for pending tasks
+        if (task.status !== 'pending') return;
+        const rule = state.quadrantRules[task.quadrant];
+        if (!rule || rule.deadline === 'none') return;
+        
+        const createdAt = new Date(task.created_at).getTime();
+        let deadlineMs = 0;
+        let targetTime = 0;
+        
+        if (task.due_date) {
+          targetTime = new Date(task.due_date).getTime();
+        } else {
+          switch (rule.deadline) {
+            case '10s': deadlineMs = 10 * 1000; break;
+            case '20s': deadlineMs = 20 * 1000; break;
+            case '30s': deadlineMs = 30 * 1000; break;
+            case '40s': deadlineMs = 40 * 1000; break;
+            case 'today': deadlineMs = 24 * 60 * 60 * 1000; break;
+            case 'week': deadlineMs = 7 * 24 * 60 * 60 * 1000; break;
+            case 'month': deadlineMs = 30 * 24 * 60 * 60 * 1000; break;
+          }
+          targetTime = createdAt + deadlineMs;
+        }
+        
+        if ((task.due_date || deadlineMs > 0) && now > targetTime) {
+          coinsLost += rule.penalty;
+          const strikes = (task.strike_count || 0) + 1;
+          
+          if (state.strikeSettings.taskLimit > 0 && strikes >= state.strikeSettings.taskLimit) {
+            tasksToDelete.push(task.id);
+            deletedTitles.push(task.title);
+          } else {
+            tasksToReset.push({ id: task.id, strikes });
+          }
+          
+          if (rule.penalty > 0) {
+            historyEntries.push({
+              id: Math.random().toString(36).substring(2, 9),
+              user_id: state.user?.id || 'guest',
+              item_id: task.id,
+              item_type: 'task',
+              title: `Missed Deadline: ${task.title}`,
+              coins_earned: -rule.penalty,
+              completed_at: new Date().toISOString()
+            });
+          }
+        }
+      });
+    }
+
+    // Evaluate Habits
+    if (state.habits && state.habits.length > 0) {
+      state.habits.forEach(habit => {
+        let intervalMs = 0;
+        switch (habit.frequency) {
+          case 'daily': intervalMs = 24 * 60 * 60 * 1000; break;
+          case 'weekly': intervalMs = 7 * 24 * 60 * 60 * 1000; break;
+          case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break;
+        }
+        // Actually, if we want to allow 1 interval to complete, target is lastAction + intervalMs. 
+        // If it's daily, 24h to do it. If we haven't done it in 24h, it's missed. 
+        const lastAction = habit.last_completed_at ? new Date(habit.last_completed_at).getTime() : new Date(habit.created_at).getTime();
+        
+        if (now - lastAction > intervalMs) {
+          // Missed habit cycle!
+          const strikes = (habit.strike_count || 0) + 1;
+          
+          // Habit penalties can be generic or based on reward
+          const penalty = Math.max(10, Math.floor(habit.reward_amount * 2));
+          coinsLost += penalty;
+          
+          if (state.strikeSettings.habitLimit > 0 && strikes >= state.strikeSettings.habitLimit) {
+            habitsToDelete.push(habit.id);
+            deletedTitles.push(habit.title);
+          } else {
+            habitsToReset.push({ id: habit.id, strikes });
+          }
+          
+          historyEntries.push({
+            id: Math.random().toString(36).substring(2, 9),
+            user_id: state.user?.id || 'guest',
+            item_id: habit.id,
+            item_type: 'habit',
+            title: `Missed Habit: ${habit.title}`,
+            coins_earned: -penalty,
+            completed_at: new Date().toISOString()
+          });
+        }
+      });
+    }
+    
+    // Apply state changes
+    if (tasksToReset.length > 0 || tasksToDelete.length > 0 || habitsToReset.length > 0 || habitsToDelete.length > 0 || coinsLost > 0) {
+      const newTime = new Date().toISOString();
+      
+      const resetTaskIds = tasksToReset.map(t => t.id);
+      const resetHabitIds = habitsToReset.map(h => h.id);
+      
+      set((s) => ({
+        tasks: s.tasks
+          .filter(t => !tasksToDelete.includes(t.id))
+          .map(t => resetTaskIds.includes(t.id) ? { ...t, created_at: newTime, due_date: undefined, strike_count: tasksToReset.find(x => x.id === t.id)?.strikes } : t),
+        habits: s.habits
+          .filter(h => !habitsToDelete.includes(h.id))
+          .map(h => resetHabitIds.includes(h.id) ? { ...h, created_at: newTime, last_completed_at: newTime, strike_count: habitsToReset.find(x => x.id === h.id)?.strikes } : h),
+        coinBalance: s.coinBalance - coinsLost,
+        taskHistory: [...historyEntries, ...s.taskHistory]
+      }));
+      
+      if (coinsLost > 0) {
+        const resetTitles = [
+          ...tasksToReset.map(t => state.tasks.find(x => x.id === t.id)?.title || 'Task'),
+          ...habitsToReset.map(h => state.habits.find(x => x.id === h.id)?.title || 'Habit')
+        ];
+        // Only show titles that weren't deleted in the reset list
+        get().setPenaltyAlert({ 
+          titles: resetTitles, 
+          totalLost: coinsLost,
+          deletedTitles: deletedTitles.length > 0 ? deletedTitles : undefined
+        });
+      }
+      
+      if (state.user) {
+        supabase.from('profiles').update({ coin_balance: state.coinBalance - coinsLost }).eq('id', state.user.id).then();
+        
+        if (resetTaskIds.length > 0) {
+          resetTaskIds.forEach(id => {
+             supabase.from('tasks').update({ created_at: newTime, due_date: null, strike_count: tasksToReset.find(x => x.id === id)?.strikes }).eq('id', id).then();
+          });
+        }
+        if (tasksToDelete.length > 0) supabase.from('tasks').delete().in('id', tasksToDelete).then();
+        
+        if (resetHabitIds.length > 0) {
+          resetHabitIds.forEach(id => {
+             supabase.from('habits').update({ created_at: newTime, last_completed_at: newTime, strike_count: habitsToReset.find(x => x.id === id)?.strikes }).eq('id', id).then();
+          });
+        }
+        if (habitsToDelete.length > 0) supabase.from('habits').delete().in('id', habitsToDelete).then();
+        
+        if (historyEntries.length > 0) {
+          supabase.from('task_history').insert(historyEntries).then();
+        }
+      }
+    }
+
+    if (tasksToRespawn.length > 0) {
+      const respawnTime = new Date().toISOString();
+      set((s) => ({
+        tasks: s.tasks.map(t => tasksToRespawn.includes(t.id) ? { ...t, status: 'pending', created_at: respawnTime, due_date: undefined, completed_at: undefined } : t)
+      }));
+      if (state.user) {
+        supabase.from('tasks').update({ status: 'pending', created_at: respawnTime, due_date: null, completed_at: null }).in('id', tasksToRespawn).then();
+      }
+    }
+  },
   
   setTheme: (theme) => {
     set({ theme });
@@ -473,8 +768,9 @@ export const useStore = create<StoreState>()(
     }
 
     // Optimistic update
+    const completedAtStr = new Date().toISOString();
     set((state) => ({
-      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status } : t)
+      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status, completed_at: status === 'completed' ? completedAtStr : undefined } : t)
     }));
 
     if (status === 'completed') {
@@ -485,7 +781,7 @@ export const useStore = create<StoreState>()(
       if (state.user) {
         const user = state.user;
         // Update DB
-        supabase.from('tasks').update({ status, pending_coins: 0 }).eq('id', taskId).then();
+        supabase.from('tasks').update({ status, pending_coins: 0, completed_at: completedAtStr }).eq('id', taskId).then();
         supabase.from('profiles').update({ coin_balance: newBalance }).eq('id', user.id).then();
         supabase.from('transactions').insert({
           user_id: user.id,
@@ -532,7 +828,11 @@ export const useStore = create<StoreState>()(
       tasks: state.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t)
     }));
     if (get().user) {
-      await supabase.from('tasks').update(updates).eq('id', taskId);
+      const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+      if (error) {
+        console.error("Supabase Update Error (Task):", error);
+        alert(`Failed to save task update to database: ${error.message}`);
+      }
     }
   },
 

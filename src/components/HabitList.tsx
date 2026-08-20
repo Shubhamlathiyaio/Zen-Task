@@ -7,7 +7,7 @@ import confetti from 'canvas-confetti';
 import { getTagColor, getTagTextColor } from '../lib/colors';
 
 export default function HabitList() {
-  const { habits, updateHabitStatus, startActiveTimer, user, setHabits } = useStore();
+  const { habits, updateHabitStatus, startActiveTimer, user, setHabits, taskFilterTag, taskFilterTimeline, taskFilterPriority } = useStore();
 
   const deleteHabit = async (id: string) => {
     setHabits(habits.filter(h => h.id !== id));
@@ -16,7 +16,14 @@ export default function HabitList() {
     }
   };
 
-  if (habits.length === 0) return null;
+  const filteredHabits = habits.filter(habit => {
+    if (taskFilterTag && (!habit.tags || !habit.tags.includes(taskFilterTag))) return false;
+    if (taskFilterTimeline !== 'all' && habit.frequency !== taskFilterTimeline) return false;
+    if (taskFilterPriority && habit.frequency !== 'daily') return false; // Priority mode only shows daily habits
+    return true;
+  });
+
+  if (filteredHabits.length === 0) return null;
 
   return (
     <div className="mt-8">
@@ -25,7 +32,7 @@ export default function HabitList() {
       </h2>
       <div className="flex flex-col gap-3">
         <AnimatePresence>
-          {habits.map(habit => (
+          {filteredHabits.map(habit => (
             <motion.div
               key={habit.id}
               initial={{ opacity: 0, y: 10 }}
@@ -37,6 +44,9 @@ export default function HabitList() {
               <div className="flex items-center gap-3 w-full md:w-auto flex-1 min-w-0">
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-(--color-on-surface) font-bold text-lg break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{habit.title}</span>
+                  {habit.description && (
+                    <p className="text-sm text-(--color-muted-text) mt-1 mb-0 break-words whitespace-pre-wrap">{habit.description}</p>
+                  )}
                   
                   <div className="flex gap-2 mt-2 flex-wrap items-center">
                     {habit.tags && habit.tags.map(tag => (
@@ -69,7 +79,7 @@ export default function HabitList() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => {
-                       startActiveTimer(habit.id, 'habit', habit.title, 2); // default multiplier 2 for habits
+                       startActiveTimer(habit.id, 'habit', habit.title, habit.reward_amount || 1);
                     }}
                     className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-(--color-surface-2) rounded-md border-none cursor-pointer p-2 opacity-50 hover:opacity-100"
                     title="Start Focus Timer"
@@ -86,36 +96,9 @@ export default function HabitList() {
                 </div>
                 
                 <div className="flex flex-col items-end">
-                  <span className="text-(--color-reward) font-bold text-sm mb-1">
-                    +{habit.reward_amount + (habit.pending_coins || 0)}
+                  <span className="text-(--color-reward) font-bold text-sm bg-(--color-surface-2) px-3 py-1.5 rounded-md border border-(--color-border)">
+                    +{habit.reward_amount} coins / min
                   </span>
-                  <button 
-                    className={`rounded-md w-10 h-10 flex items-center justify-center transition-all cursor-pointer z-20 border-none group ${habit.last_completed_at ? 'bg-(--color-primary-60) text-white opacity-50 cursor-not-allowed' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-primary-60)'}`}
-                    disabled={!!habit.last_completed_at}
-                    onClick={(e) => {
-                      if (habit.last_completed_at) return;
-                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      const x = (rect.left + rect.width / 2) / window.innerWidth;
-                      const y = (rect.top + rect.height / 2) / window.innerHeight;
-                      
-                      confetti({
-                        particleCount: 50,
-                        spread: 60,
-                        origin: { x, y },
-                        colors: ['#F59E0B', '#EF4444', '#10B981'],
-                        disableForReducedMotion: true
-                      });
-                      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-                      audio.volume = 0.5;
-                      audio.play().catch(console.error);
-                      updateHabitStatus(habit.id);
-                    }}
-                    title={habit.last_completed_at ? "Completed for now" : "Complete Habit"}
-                  >
-                    <div className={`w-8 h-8 rounded-md flex items-center justify-center border-[3px] border-current transition-all ${habit.last_completed_at ? 'bg-current border-transparent' : 'group-hover:bg-(--color-primary-60) group-hover:border-(--color-primary-60) group-active:scale-90'}`}>
-                      <Check className={`w-5 h-5 ${habit.last_completed_at ? 'text-white' : 'text-transparent group-hover:text-white'}`} strokeWidth={4} />
-                    </div>
-                  </button>
                 </div>
               </div>
             </motion.div>

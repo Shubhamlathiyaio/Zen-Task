@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import { Settings, LogOut, User, Moon, Sun, Palette, Timer, Brain, Coffee, Tag, Plus, Trash2, LayoutGrid, List } from 'lucide-react';
 
 export default function SettingsView({ onLogout }: { onLogout: () => void }) {
-  const { user, theme, setTheme, timerSettings, setTimerSettings, timerIsRunning, customTags, setCustomTagColor, deleteCustomTag, taskViewMode, setTaskViewMode, avatarStyle, avatarSeed } = useStore();
+  const { user, theme, setTheme, timerSettings, setTimerSettings, timerIsRunning, customTags, setCustomTagColor, deleteCustomTag, taskViewMode, setTaskViewMode, avatarStyle, avatarSeed, quadrantRules, setQuadrantRule, strikeSettings, setStrikeSettings } = useStore();
   
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#FACC15');
@@ -97,6 +97,107 @@ export default function SettingsView({ onLogout }: { onLogout: () => void }) {
           </section>
 
 
+
+          {/* Rules Section */}
+          <section>
+            <h3 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-4 border-b border-(--color-border) pb-2 flex items-center gap-2">
+              <Timer className="w-4 h-4" /> Deadlines & Penalties
+            </h3>
+            <div className="bg-(--color-neutral) rounded-xl p-4 border border-(--color-border) flex flex-col gap-4">
+              <p className="text-sm text-(--color-muted-text) mb-2">Set automatic deadlines and missed task penalties for each quadrant.</p>
+              
+              {[
+                { id: 'q1_urgent_important', name: 'Urgent & Important (Q1)' },
+                { id: 'q2_not_urgent_important', name: 'Not Urgent & Important (Q2)' },
+                { id: 'q3_urgent_not_important', name: 'Urgent & Not Important (Q3)' },
+                { id: 'q4_not_urgent_not_important', name: 'Neither (Q4)' }
+              ].map(q => {
+                const rule = quadrantRules?.[q.id] || { deadline: 'none', penalty: 0 };
+                
+                return (
+                  <div key={q.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-(--color-surface) rounded-lg border border-(--color-border)">
+                    <span className="font-bold text-sm text-(--color-on-surface) flex-1">{q.name}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <select 
+                        value={rule.deadline}
+                        onChange={(e) => setQuadrantRule(q.id, { deadline: e.target.value as any })}
+                        className="bg-(--color-surface-2) text-(--color-on-surface) border border-(--color-border) rounded-md px-2 py-1.5 text-sm outline-none"
+                      >
+                        <option value="none">No Deadline</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option disabled>──────</option>
+                        <option value="10s">10 Seconds (Test)</option>
+                        <option value="20s">20 Seconds (Test)</option>
+                        <option value="30s">30 Seconds (Test)</option>
+                        <option value="40s">40 Seconds (Test)</option>
+                      </select>
+                      <div className="flex items-center gap-1 bg-(--color-surface-2) border border-(--color-border) rounded-md px-2 py-1.5">
+                        <span className="text-xs text-amber-500 font-bold">🪙</span>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={rule.penalty}
+                          onChange={(e) => setQuadrantRule(q.id, { penalty: parseInt(e.target.value) || 0 })}
+                          className="w-12 bg-transparent text-(--color-on-surface) text-sm outline-none border-none text-right font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Strike Settings */}
+          <section>
+            <h3 className="text-sm font-bold text-(--color-muted-text) uppercase tracking-wider mb-4 border-b border-(--color-border) pb-2 flex items-center gap-2 text-red-500">
+              <span className="text-lg">🗑️</span> Strike System (Auto-Delete)
+            </h3>
+            
+            <p className="text-xs text-(--color-muted-text) mb-4">
+              If a quest or habit is missed consecutively, it will be automatically deleted when it reaches the strike limit.
+            </p>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 bg-(--color-surface-2) rounded-lg border border-(--color-border)">
+                <div>
+                  <h4 className="font-bold text-sm text-(--color-on-surface)">Quests Strike Limit</h4>
+                  <p className="text-[10px] text-(--color-muted-text)">Missed deadlines before deletion.</p>
+                </div>
+                <select
+                  value={strikeSettings?.taskLimit || 3}
+                  onChange={(e) => setStrikeSettings({ taskLimit: Number(e.target.value) })}
+                  className="bg-(--color-surface) text-(--color-on-surface) border border-(--color-border) rounded-md px-2 py-1.5 text-sm font-bold outline-none"
+                >
+                  <option value={0}>Disabled</option>
+                  <option value={1}>1 Miss = Delete</option>
+                  <option value={2}>2 Misses = Delete</option>
+                  <option value={3}>3 Misses = Delete</option>
+                  <option value={5}>5 Misses = Delete</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 bg-(--color-surface-2) rounded-lg border border-(--color-border)">
+                <div>
+                  <h4 className="font-bold text-sm text-(--color-on-surface)">Habits Strike Limit</h4>
+                  <p className="text-[10px] text-(--color-muted-text)">Consecutive missed cycles before deletion.</p>
+                </div>
+                <select
+                  value={strikeSettings?.habitLimit || 3}
+                  onChange={(e) => setStrikeSettings({ habitLimit: Number(e.target.value) })}
+                  className="bg-(--color-surface) text-(--color-on-surface) border border-(--color-border) rounded-md px-2 py-1.5 text-sm font-bold outline-none"
+                >
+                  <option value={0}>Disabled</option>
+                  <option value={1}>1 Miss = Delete</option>
+                  <option value={2}>2 Misses = Delete</option>
+                  <option value={3}>3 Misses = Delete</option>
+                  <option value={5}>5 Misses = Delete</option>
+                </select>
+              </div>
+            </div>
+          </section>
 
           {/* Theme Section */}
           <section>

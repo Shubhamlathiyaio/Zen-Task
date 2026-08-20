@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Play, Pause, RotateCcw, Volume2, Coffee, Brain, SkipForward, Timer } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, Coffee, Brain, SkipForward, Timer, CheckCircle2, ChevronDown } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 export default function FocusTimer() {
   const { 
@@ -8,12 +9,17 @@ export default function FocusTimer() {
     timerTimeLeft, setTimerTimeLeft, 
     timerIsRunning, setTimerIsRunning,
     timerSettings, setTimerSettings,
-    soundscapes, activeSoundscape, setActiveSoundscape
+    soundscapes, activeSoundscape, setActiveSoundscape,
+    tasks, updateTaskStatus,
+    activePomodoroTaskId, setActivePomodoroTaskId
   } = useStore();
 
   const getTimerDuration = (mode: 'work' | 'shortBreak' | 'longBreak') => {
     return timerSettings[mode] * 60;
   };
+
+  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const activeTask = pendingTasks.find(t => t.id === activePomodoroTaskId);
 
   const toggleTimer = () => setTimerIsRunning(!timerIsRunning);
 
@@ -36,6 +42,29 @@ export default function FocusTimer() {
     }
   };
 
+  const handleCompleteTask = (e: React.MouseEvent) => {
+    if (!activePomodoroTaskId) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+    
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { x, y },
+      colors: ['#925CF3', '#FACC15', '#4ADE80'],
+      disableForReducedMotion: true
+    });
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(console.error);
+    } catch(err) {}
+    
+    updateTaskStatus(activePomodoroTaskId, 'completed');
+    setActivePomodoroTaskId(null);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -47,6 +76,32 @@ export default function FocusTimer() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+      {/* Task Selector Dropdown */}
+      <div className="bg-(--color-surface) rounded-2xl p-4 md:p-6 border border-(--color-border) shadow-md flex flex-col md:flex-row items-center gap-4 justify-between z-20">
+        <div className="flex-1 w-full relative">
+          <select 
+            value={activePomodoroTaskId || ''} 
+            onChange={(e) => setActivePomodoroTaskId(e.target.value || null)}
+            className="w-full bg-(--color-neutral) text-(--color-on-surface) border border-(--color-border) rounded-xl px-4 py-3 appearance-none font-bold outline-none focus:border-(--color-primary) transition-colors cursor-pointer"
+          >
+            <option value="">-- Select a quest to focus on --</option>
+            {pendingTasks.map(task => (
+              <option key={task.id} value={task.id}>{task.title}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-(--color-muted-text) pointer-events-none w-5 h-5" />
+        </div>
+        {activeTask && (
+          <button
+            onClick={handleCompleteTask}
+            className="w-full md:w-auto shrink-0 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer border-none shadow-md active:scale-95"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Complete Quest
+          </button>
+        )}
+      </div>
+
       <div className="bg-(--color-surface) rounded-2xl p-8 border border-(--color-border) shadow-xl flex flex-col items-center justify-center min-h-[400px] relative overflow-hidden">
         
         {/* Animated Background Pulse when running */}
@@ -101,8 +156,8 @@ export default function FocusTimer() {
             <span className="text-6xl md:text-7xl font-bold text-(--color-on-surface) font-mono tracking-tight drop-shadow-md">
               {formatTime(timerTimeLeft)}
             </span>
-            <span className="text-(--color-muted-text) mt-2 uppercase tracking-widest text-sm font-bold">
-              {timerMode === 'work' ? 'Stay Focused' : 'Take a breath'}
+            <span className="text-(--color-muted-text) mt-2 uppercase tracking-widest text-sm font-bold text-center px-4">
+              {timerMode === 'work' ? (activeTask ? activeTask.title : 'Stay Focused') : 'Take a breath'}
             </span>
           </div>
         </div>

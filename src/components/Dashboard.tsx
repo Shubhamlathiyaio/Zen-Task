@@ -12,13 +12,14 @@ import ProfileView from './ProfileView';
 import ActivityTiles from './ActivityTiles';
 import ActiveTimerBar from './ActiveTimerBar';
 import HabitList from './HabitList';
+import TaskFilters from './TaskFilters';
 import HistoryView from './HistoryView';
 import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Dashboard() {
-  const { user, isGuest, isAuthLoading, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence, updateTimersElapsed } = useStore();
+  const { user, isGuest, isAuthLoading, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence, updateTimersElapsed, evaluatePenalties, activeTimers, notifications, removeNotification, penaltyAlert, setPenaltyAlert } = useStore();
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -65,9 +66,10 @@ export default function Dashboard() {
   useEffect(() => {
     const multiTimerInterval = setInterval(() => {
       updateTimersElapsed();
+      evaluatePenalties();
     }, 1000);
     return () => clearInterval(multiTimerInterval);
-  }, [updateTimersElapsed]);
+  }, [updateTimersElapsed, evaluatePenalties]);
 
   const handleLogout = async () => {
     if (user) {
@@ -169,7 +171,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar pb-32 md:pb-32">
+        <div className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar pb-[72px] md:pb-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -181,9 +183,9 @@ export default function Dashboard() {
             >
               {currentView === 'tasks' && (
                 <div className="flex flex-col gap-8">
-                  <div className="flex justify-between items-center">
-                    <ActivityTiles />
-                  </div>
+                  <TaskFilters />
+                  <HabitList />
+                  
                   <div className="flex justify-end mb-4">
                     <div className="bg-(--color-surface) p-1 rounded-lg flex border border-(--color-border)">
                       <button 
@@ -201,7 +203,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {taskViewMode === 'matrix' ? <EisenhowerMatrix /> : <TaskList />}
-                  <HabitList />
                 </div>
               )}
               
@@ -213,23 +214,110 @@ export default function Dashboard() {
               {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
             </motion.div>
           </AnimatePresence>
-          {/* Spacer to ensure the user can scroll past the floating ActionHub button */}
-          <div className="h-32 md:h-40 w-full shrink-0"></div>
         </div>
       </main>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-around p-2 pb-safe">
-        <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
-        <NavItem view="timer" icon={Timer} label="Focus" />
-        <NavItem view="history" icon={History} label="History" />
-        <NavItem view="store" icon={ShoppingBag} label="Store" />
-        <NavItem view="party" icon={Users} label="Party" />
-        <NavItem view="settings" icon={Settings} label="Settings" />
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 p-2 pb-safe h-[72px]">
+        <div className="flex w-[40%] justify-around">
+          <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
+          <NavItem view="timer" icon={Timer} label="Focus" />
+          <NavItem view="history" icon={History} label="History" />
+        </div>
+        {/* Empty space in middle for the FAB to overlay */}
+        <div className="w-[20%]"></div>
+        <div className="flex w-[40%] justify-around">
+          <NavItem view="store" icon={ShoppingBag} label="Store" />
+          <NavItem view="party" icon={Users} label="Party" />
+          <NavItem view="settings" icon={Settings} label="Settings" />
+        </div>
       </div>
 
       <ActiveTimerBar />
       <ActionHub />
+      {/* Notifications Toast */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4">
+        <AnimatePresence>
+          {notifications.map((notif) => (
+            <motion.div
+              key={notif.id}
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              className={`p-4 rounded-xl shadow-lg border pointer-events-auto flex items-center justify-between gap-3 backdrop-blur-md ${
+                notif.type === 'error' ? 'bg-red-500/90 border-red-500/20 text-white' : 
+                notif.type === 'warning' ? 'bg-amber-500/90 border-amber-500/20 text-white' : 
+                'bg-(--color-surface) border-(--color-border) text-(--color-on-surface)'
+              }`}
+            >
+              <div className="flex-1 font-bold text-sm">
+                {notif.message}
+              </div>
+              <button 
+                onClick={() => removeNotification(notif.id)}
+                className="text-white/70 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Penalty Alert Modal */}
+      <AnimatePresence>
+        {penaltyAlert && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-(--color-surface) rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-red-500/30 flex flex-col items-center text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-6">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h2 className="text-2xl font-bold text-(--color-on-surface) mb-2">Deadline Missed!</h2>
+              <p className="text-(--color-muted-text) mb-6">
+                You failed to complete {penaltyAlert.titles.length === 1 ? 'this action' : 'these actions'} on time:
+              </p>
+              
+              <div className="bg-(--color-neutral) rounded-xl p-4 w-full border border-(--color-border) mb-6 max-h-32 overflow-y-auto">
+                <ul className="text-left m-0 pl-4 text-sm font-bold text-(--color-on-surface)">
+                  {penaltyAlert.titles.map((t, i) => (
+                    <li key={i} className="mb-1">{t}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              {penaltyAlert.deletedTitles && penaltyAlert.deletedTitles.length > 0 && (
+                <div className="bg-red-500/10 rounded-xl p-4 w-full border border-red-500/30 mb-6">
+                  <p className="text-red-500 font-bold text-sm mb-2 text-left flex items-center gap-2">
+                    <span className="text-lg">🗑️</span> Strike Limit Reached! Deleted:
+                  </p>
+                  <ul className="text-left m-0 pl-4 text-sm font-bold text-red-500">
+                    {penaltyAlert.deletedTitles.map((t, i) => (
+                      <li key={i} className="mb-1">{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div className="text-xl font-bold mb-8">
+                Penalty: <span className="text-red-500 font-mono">-{penaltyAlert.totalLost} Coins</span>
+              </div>
+              
+              <button
+                onClick={() => setPenaltyAlert(null)}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer border-none"
+              >
+                I Understand
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

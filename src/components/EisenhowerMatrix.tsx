@@ -34,7 +34,7 @@ const QUADRANT_BG_TINTS: Record<QuadrantType, string> = {
 };
 
 // Draggable Task Card
-function SortableTaskCard({ task }: { task: Task }) {
+function SortableTaskCard({ task, deadlineMs }: { task: Task, deadlineMs: number }) {
   const { updateTaskStatus, setEditingTask, deleteTask, startActiveTimer } = useStore();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
@@ -45,35 +45,68 @@ function SortableTaskCard({ task }: { task: Task }) {
     touchAction: 'pan-y' // Ensure vertical scrolling works on mobile
   };
 
+  const now = Date.now();
+  const timeRemaining = deadlineMs - now;
+  const isNearDeadline = deadlineMs !== Infinity && timeRemaining < 3600000; // < 1 hour
+  
+  let deadlineString = '';
+  if (deadlineMs !== Infinity) {
+    if (timeRemaining <= 0) {
+      deadlineString = 'Overdue';
+    } else if (timeRemaining < 60000) {
+      deadlineString = '< 1 min';
+    } else if (timeRemaining < 3600000) {
+      deadlineString = `${Math.floor(timeRemaining / 60000)} mins left`;
+    } else if (timeRemaining < 86400000) {
+      deadlineString = `${Math.floor(timeRemaining / 3600000)} hours left`;
+    } else {
+      deadlineString = `${Math.floor(timeRemaining / 86400000)} days left`;
+    }
+  }
+
   return (
     <div 
       ref={setNodeRef}
       style={style}
       {...attributes} 
       {...listeners}
-      className={`bg-(--color-neutral) p-3 pl-5 rounded-md flex justify-between items-start gap-2 shadow-sm border border-(--color-border) hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative group`}
+      className={`group relative bg-(--color-surface-2) p-3 pl-5 rounded-md flex justify-between items-start gap-2 shadow-sm border ${isNearDeadline ? 'border-red-500/50 shadow-red-500/10 bg-red-500/5' : 'border-(--color-border)'} hover:shadow-md transition-all cursor-grab active:cursor-grabbing text-left mb-2`}
     >
       <div className={`absolute left-2 top-1/2 -translate-y-1/2 w-1 h-3/5 rounded-full ${QUADRANT_COLORS_BG[task.quadrant]}`} />
+      
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-(--color-on-surface) font-medium break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{task.title}</span>
-        {task.tags && task.tags.length > 0 && (
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {task.tags.map(tag => (
-              <span 
-                key={tag} 
-                className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold border whitespace-nowrap"
-                style={{
-                  backgroundColor: getTagColor(tag),
-                  color: getTagTextColor(tag),
-                  borderColor: getTagTextColor(tag)
-                }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+        {task.description && (
+          <p className="text-xs text-(--color-muted-text) mt-1 mb-0 break-words whitespace-pre-wrap">{task.description}</p>
         )}
+        
+        <div className="flex gap-2 mt-2 flex-wrap items-center">
+          {task.tags?.map(tag => (
+            <span 
+              key={tag} 
+              className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border whitespace-nowrap"
+              style={{
+                backgroundColor: getTagColor(tag),
+                color: getTagTextColor(tag),
+                borderColor: getTagTextColor(tag)
+              }}
+            >
+              {tag}
+            </span>
+          ))}
+          {task.is_required && (
+            <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border border-red-500/20 bg-red-500/10 text-red-500 whitespace-nowrap">
+              Required
+            </span>
+          )}
+          {deadlineMs !== Infinity && (
+            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border flex items-center gap-1 whitespace-nowrap ${isNearDeadline ? 'bg-red-500/20 text-red-500 border-red-500/30' : 'bg-(--color-primary)/10 text-(--color-primary) border-(--color-primary)/20'}`}>
+              ⏱️ {deadlineString}
+            </span>
+          )}
+        </div>
       </div>
+      
       <div className="flex items-center gap-2 shrink-0" onPointerDown={e => e.stopPropagation()}>
         <button 
           onClick={(e) => {
@@ -81,21 +114,21 @@ function SortableTaskCard({ task }: { task: Task }) {
              const multiplier = task.quadrant === 'q1_urgent_important' ? 4 : task.quadrant === 'q2_not_urgent_important' ? 3 : task.quadrant === 'q3_urgent_not_important' ? 2 : 1;
              startActiveTimer(task.id, 'task', task.title, multiplier);
           }}
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100"
-          title="Start Focus Timer"
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100"
+          title="Start Timer"
         >
           <Play className="w-4 h-4" />
         </button>
         <button 
-          onClick={() => setEditingTask(task)}
-          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100"
-          title="Edit Quest"
+          onClick={(e) => { e.stopPropagation(); setEditingTask(task); }}
+          className="text-(--color-muted-text) hover:text-(--color-primary-60) transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100"
+          title="Edit"
         >
           <Pencil className="w-4 h-4" />
         </button>
         <button 
-          onClick={() => deleteTask(task.id)}
-          className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 hidden sm:block opacity-0 group-hover:opacity-100 mr-2"
+          onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+          className="text-(--color-muted-text) hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 mr-2"
           title="Delete Quest"
         >
           <Trash2 className="w-4 h-4" />
@@ -139,7 +172,7 @@ import { useDroppable } from '@dnd-kit/core';
 function QuadrantContainer({ 
   id, title, tasks, isActiveMobile, onClick 
 }: { 
-  id: QuadrantType, title: string, tasks: Task[], isActiveMobile: boolean, onClick: () => void 
+  id: QuadrantType, title: string, tasks: { task: Task, deadlineMs: number }[], isActiveMobile: boolean, onClick: () => void 
 }) {
   const { setNodeRef } = useDroppable({ id });
   
@@ -169,16 +202,16 @@ function QuadrantContainer({
       </div>
       
       <div className={`flex flex-col gap-3 flex-1 min-h-[50px] md:min-h-[150px] ${!isActiveMobile ? 'hidden md:flex' : 'flex'}`}>
-        <SortableContext id={id} items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext id={id} items={tasks.map(t => t.task.id)} strategy={verticalListSortingStrategy}>
           <AnimatePresence>
-            {tasks.map(task => (
+            {tasks.map(({ task, deadlineMs }) => (
               <motion.div
                 key={task.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
               >
-                <SortableTaskCard task={task} />
+                <SortableTaskCard task={task} deadlineMs={deadlineMs} />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -195,18 +228,53 @@ function QuadrantContainer({
 
 
 export default function EisenhowerMatrix() {
-  const { tasks, setTasks, user } = useStore();
+  const { tasks, setTasks, user, setCurrentView, taskFilterTag, taskFilterTimeline, taskFilterPriority, quadrantRules } = useStore();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeMobileQuadrant, setActiveMobileQuadrant] = useState<QuadrantType>('q1_urgent_important');
+  const [, setTick] = useState(0);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }), // Prevent drag on simple scroll on mobile
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const getTaskDeadline = (task: Task) => {
+    const rule = quadrantRules[task.quadrant];
+    if (task.due_date) return new Date(task.due_date).getTime();
+    if (!rule || rule.deadline === 'none') return Infinity;
+    
+    const createdAt = new Date(task.created_at).getTime();
+    let deadlineMs = 0;
+    switch (rule.deadline) {
+      case '10s': deadlineMs = 10 * 1000; break;
+      case '20s': deadlineMs = 20 * 1000; break;
+      case '30s': deadlineMs = 30 * 1000; break;
+      case '40s': deadlineMs = 40 * 1000; break;
+      case 'today': deadlineMs = 24 * 60 * 60 * 1000; break;
+      case 'week': deadlineMs = 7 * 24 * 60 * 60 * 1000; break;
+      case 'month': deadlineMs = 30 * 24 * 60 * 60 * 1000; break;
+    }
+    if (deadlineMs === 0) return Infinity;
+    return createdAt + deadlineMs;
+  };
 
-  const getQuadrantTasks = (q: QuadrantType) => pendingTasks.filter(t => t.quadrant === q);
+  const pendingTasks = tasks.filter(t => {
+    if (t.status !== 'pending') return false;
+    if (taskFilterTag && (!t.tags || !t.tags.includes(taskFilterTag))) return false;
+    if (taskFilterTimeline !== 'all' && t.frequency !== taskFilterTimeline) return false;
+    if (taskFilterPriority && t.quadrant !== 'q1_urgent_important' && !t.is_required) return false;
+    return true;
+  });
+
+  const getQuadrantTasks = (q: QuadrantType) => pendingTasks
+    .filter(t => t.quadrant === q)
+    .map(task => ({ task, deadlineMs: getTaskDeadline(task) }))
+    .sort((a, b) => a.deadlineMs - b.deadlineMs);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -294,8 +362,9 @@ export default function EisenhowerMatrix() {
         .dynamic-mobile-grid {
           display: grid;
           gap: 0.5rem;
-          height: calc(100vh - 180px);
-          min-height: 400px;
+          height: 55vh;
+          min-height: 320px;
+          max-height: 480px;
           transition: grid-template-columns 0.35s ease, grid-template-rows 0.35s ease;
           grid-template-columns: var(--m-cols);
           grid-template-rows: var(--m-rows);
@@ -353,15 +422,8 @@ export default function EisenhowerMatrix() {
 
       <DragOverlay>
         {activeTask ? (
-          <div className="bg-(--color-surface-2) p-3 rounded-md flex justify-between items-start gap-2 shadow-2xl border-2 border-(--color-primary) opacity-90 scale-105 rotate-2 cursor-grabbing">
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-(--color-on-surface) font-medium break-words" style={{ fontFamily: 'var(--font-roboto)' }}>{activeTask.title}</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-(--color-reward) font-bold text-sm">
-                +{activeTask.reward_amount}
-              </span>
-            </div>
+          <div className="opacity-90 scale-105 rotate-2 cursor-grabbing">
+            <SortableTaskCard task={activeTask} deadlineMs={getTaskDeadline(activeTask)} />
           </div>
         ) : null}
       </DragOverlay>

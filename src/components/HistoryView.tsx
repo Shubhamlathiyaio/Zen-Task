@@ -26,12 +26,12 @@ export default function HistoryView() {
         <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
           <Coins className="w-8 h-8 text-amber-500 mb-2" />
           <p className="text-(--color-muted-text) text-sm font-bold uppercase tracking-widest mb-1">Total Spoils</p>
-          <p className="text-4xl font-black text-white font-mono">{totalCoinsEarned}</p>
+          <p className="text-4xl font-black text-(--color-on-surface) font-mono">{totalCoinsEarned}</p>
         </div>
         <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
           <Target className="w-8 h-8 text-(--color-primary-60) mb-2" />
           <p className="text-(--color-muted-text) text-sm font-bold uppercase tracking-widest mb-1">Actions Completed</p>
-          <p className="text-4xl font-black text-white font-mono">{filteredHistory.length}</p>
+          <p className="text-4xl font-black text-(--color-on-surface) font-mono">{filteredHistory.length}</p>
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default function HistoryView() {
             <button
               key={f}
               onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border-none cursor-pointer ${filter === f ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-white'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border-none cursor-pointer ${filter === f ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'}`}
             >
               {f}
             </button>
@@ -68,7 +68,7 @@ export default function HistoryView() {
                   {item.item_type === 'habit' ? <Flame className="w-5 h-5" /> : <Target className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white m-0" style={{ fontFamily: 'var(--font-roboto)' }}>{item.title}</h3>
+                  <h3 className="text-lg font-bold text-(--color-on-surface) m-0" style={{ fontFamily: 'var(--font-roboto)' }}>{item.title}</h3>
                   <div className="flex items-center gap-2 mt-1 text-sm text-(--color-muted-text)">
                     <Calendar className="w-3 h-3" />
                     {new Date(item.completed_at).toLocaleDateString()} {new Date(item.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -10,7 +10,7 @@ export default function StoreView() {
   const { user, isGuest, coinBalance, setCoinBalance, rewards, addReward, deleteReward } = useStore();
   
   const [title, setTitle] = useState('');
-  const [cost, setCost] = useState(50);
+  const [cost, setCost] = useState<number | ''>(50);
   const [icon, setIcon] = useState('🎮');
 
   const handleAddReward = async (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export default function StoreView() {
       id: isGuest ? Math.random().toString(36).substring(2, 11) : undefined,
       user_id: user?.id || 'guest',
       title,
-      cost,
+      cost: cost === '' ? 0 : cost,
       icon,
       created_at: new Date().toISOString()
     };
@@ -36,7 +36,7 @@ export default function StoreView() {
     const { data, error } = await supabase.from('rewards').insert({
       user_id: user!.id,
       title,
-      cost,
+      cost: cost === '' ? 0 : cost,
       icon
     }).select().single();
     
@@ -119,7 +119,7 @@ export default function StoreView() {
               type="number" 
               min={1}
               value={cost}
-              onChange={e => setCost(Number(e.target.value))}
+              onChange={e => setCost(e.target.value === '' ? '' : Number(e.target.value))}
               required
               className="w-full bg-(--color-neutral) text-(--color-reward) font-bold h-12 px-4 rounded-lg border border-(--color-border) focus:outline-none focus:border-(--color-reward)"
             />

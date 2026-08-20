@@ -1,11 +1,18 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { Play, Pause, Square, Clock } from 'lucide-react';
+import { Play, Pause, Square, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 export default function ActiveTimerBar() {
   const { activeTimers, pauseActiveTimer, resumeActiveTimer, stopActiveTimer } = useStore();
+  
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [startX, setStartX] = React.useState(0);
+  const [scrollLeft, setScrollLeft] = React.useState(0);
+
+  if (!activeTimers || activeTimers.length === 0) return null;
 
   const handleStop = (e: React.MouseEvent, timerId: string) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -31,64 +38,94 @@ export default function ActiveTimerBar() {
     
     stopActiveTimer(timerId);
   };
+    
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0 && !e.shiftKey) {
+      e.currentTarget.scrollLeft += e.deltaY;
+    }
+  };
 
-  if (activeTimers.length === 0) return null;
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   return (
-    <div className="fixed bottom-[72px] md:bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none px-4">
-      <div className="flex gap-4 overflow-x-auto custom-scrollbar w-full max-w-4xl pb-2 snap-x pointer-events-auto items-end">
-        <AnimatePresence>
-          {activeTimers.map((timer) => {
-            const minutes = Math.floor(timer.elapsed / 60);
-            const seconds = Math.floor(timer.elapsed % 60);
-            const coinsEarned = minutes * timer.multiplier;
-            
-            return (
-              <motion.div 
-                key={timer.id}
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-(--color-surface) border-2 border-(--color-primary-60) rounded-2xl shadow-2xl p-3 flex items-center gap-4 min-w-[280px] md:min-w-[320px] snap-center shrink-0 backdrop-blur-md bg-opacity-95"
-              >
-                {/* Status indicator */}
-                <div className={`w-3 h-3 rounded-full shrink-0 ${timer.isRunning ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-(--color-primary-60) shrink-0">{timer.type}</span>
-                    <h4 className="text-sm font-bold text-(--color-on-surface) truncate m-0" style={{ fontFamily: 'var(--font-roboto)' }}>{timer.title}</h4>
+    <div className="fixed bottom-[72px] md:bottom-6 left-0 md:left-64 right-0 z-40 transition-all duration-300 flex justify-center pointer-events-none">
+      <div className="bg-(--color-surface) text-(--color-on-surface) shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:rounded-xl relative border-t md:border border-(--color-border) flex items-center h-16 w-full md:w-auto md:min-w-[400px] md:max-w-[calc(100vw-18rem)] pointer-events-auto">
+        
+        {/* Timer Carousel */}
+        <div 
+          ref={scrollRef}
+          className={`flex overflow-x-auto snap-x custom-scrollbar w-full items-center h-full pb-1 md:pb-2 ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+        >
+          <style>{`.custom-scrollbar::-webkit-scrollbar { display: none !important; }`}</style>
+          <AnimatePresence>
+            {activeTimers.map((timer) => {
+              const minutes = Math.floor(timer.elapsed / 60);
+              const seconds = Math.floor(timer.elapsed % 60);
+              
+              return (
+                <motion.div 
+                  key={timer.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="w-full md:w-[360px] shrink-0 snap-center px-4 flex items-center justify-between border-r border-(--color-border) last:border-r-0"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${timer.isRunning ? 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-gray-500'}`}></div>
+                    <span className="font-bold text-sm md:text-base truncate" style={{ fontFamily: 'var(--font-roboto)' }}>{timer.title}</span>
                   </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <div className="flex items-center gap-1.5 text-(--color-on-surface) font-mono text-lg tracking-wider font-bold">
-                      {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-xs font-bold text-(--color-reward) bg-(--color-surface-2) px-2 py-0.5 rounded-full">
-                      +{coinsEarned} <span className="text-(--color-muted-text)">coins</span>
-                    </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-base font-mono tracking-wider font-bold">
+                      {minutes}:{seconds.toString().padStart(2, '0')}
+                    </span>
+                    <button 
+                      onClick={(e) => handleStop(e, timer.id)}
+                      className="w-8 h-8 bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center transition-colors cursor-pointer border-none"
+                    >
+                      <Square className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                    <button 
+                      onClick={() => timer.isRunning ? pauseActiveTimer(timer.id) : resumeActiveTimer(timer.id)}
+                      className="w-8 h-8 bg-(--color-surface-2) text-(--color-on-surface) hover:bg-(--color-primary-60) rounded-full flex items-center justify-center transition-colors cursor-pointer border-none"
+                    >
+                      {timer.isRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                    </button>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2 shrink-0">
-                  <button 
-                    onClick={() => timer.isRunning ? pauseActiveTimer(timer.id) : resumeActiveTimer(timer.id)}
-                    className="w-10 h-10 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-on-surface) hover:bg-(--color-primary-60) transition-colors border-none cursor-pointer"
-                  >
-                    {timer.isRunning ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
-                  </button>
-                  <button 
-                    onClick={(e) => handleStop(e, timer.id)}
-                    className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-colors border-none cursor-pointer"
-                  >
-                    <Square className="w-4 h-4 fill-current" />
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-        {activeTimers.length > 0 && (
-          <div className="min-w-[140px] md:min-w-[180px] h-1 shrink-0 snap-end" />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+        
+        {/* Pagination Dots (Optional, inside panel now) */}
+        {activeTimers.length > 1 && (
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-1 flex gap-1">
+             {activeTimers.map((t, i) => (
+                <div key={t.id} className={`w-1 h-1 rounded-full ${i === 0 ? 'bg-red-500' : 'bg-gray-500'}`} />
+             ))}
+          </div>
         )}
       </div>
     </div>
