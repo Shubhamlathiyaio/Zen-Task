@@ -73,6 +73,18 @@ export default function ProfileView() {
 
       </div>
 
+      <div className="bg-(--color-surface) rounded-2xl p-6 md:p-8 border border-(--color-border) shadow-xl flex flex-col items-center text-center gap-4">
+        <h3 className="text-xl font-bold text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>Mobile Access</h3>
+        <p className="text-sm text-(--color-muted-text) max-w-md">Scan this QR code with your phone's camera to quickly open Zen Task on your mobile device and access your account on the go!</p>
+        <div className="bg-white p-4 rounded-xl shadow-inner mt-2">
+          <img 
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : 'https://zen-task.app')}&margin=0`} 
+            alt="Mobile Access QR Code"
+            className="w-40 h-40 object-contain mix-blend-multiply"
+          />
+        </div>
+      </div>
+
       {/* Avatar Picker Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-hidden">

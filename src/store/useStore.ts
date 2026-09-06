@@ -1191,6 +1191,17 @@ export const useStore = create<StoreState>()(
         if (persistedState.customTags && Object.keys(persistedState.customTags).length === 0) {
           merged.customTags = currentState.customTags;
         }
+        
+        // Sync timer time left with settings on hydration if it's not explicitly saved yet
+        // or if it fell back to the hardcoded initial 25 minutes (1500s) default
+        if (persistedState.timerSettings) {
+          if (persistedState.timerTimeLeft === undefined || (persistedState.timerTimeLeft === undefined && currentState.timerTimeLeft === 1500)) {
+            merged.timerTimeLeft = persistedState.timerSettings.work * 60;
+            merged.timerMode = 'work';
+            merged.timerIsRunning = false;
+          }
+        }
+        
         return merged;
       },
       partialize: (state) => ({ 

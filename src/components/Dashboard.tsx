@@ -14,13 +14,15 @@ import ActiveTimerBar from './ActiveTimerBar';
 import HabitList from './HabitList';
 import TaskFilters from './TaskFilters';
 import HistoryView from './HistoryView';
-import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun, History } from 'lucide-react';
+import { Coins, LogOut, LayoutDashboard, Timer, ShoppingBag, Users, Settings, User, Moon, Sun, History, Search, Maximize, Minimize } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import CommandPalette from './CommandPalette';
 
 export default function Dashboard() {
   const { user, isGuest, isAuthLoading, coinBalance, currentView, setCurrentView, taskViewMode, setTaskViewMode, theme, setTheme, timerIsRunning, decrementTimer, avatarStyle, avatarSeed, onlineCount, setupPresence, teardownPresence, updateTimersElapsed, evaluatePenalties, activeTimers, notifications, removeNotification, penaltyAlert, setPenaltyAlert } = useStore();
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   useEffect(() => {
     if (!user && !isGuest) return;
@@ -94,14 +96,15 @@ export default function Dashboard() {
   const NavItem = ({ view, icon: Icon, label }: { view: any, icon: any, label: string }) => (
     <button
       onClick={() => setCurrentView(view)}
-      className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-1.5 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
+      className={`flex flex-col md:flex-row items-center justify-center ${isFocusMode ? 'md:justify-center' : 'md:justify-start'} gap-1 md:gap-3 p-1.5 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
         currentView === view 
           ? 'bg-(--color-primary) text-white shadow-md shadow-(--color-primary)/20' 
           : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'
       }`}
+      title={isFocusMode ? label : undefined}
     >
-      <Icon className="w-6 h-6 md:w-5 md:h-5" />
-      <span className="text-xs md:text-base font-medium hidden md:block" style={{ fontFamily: 'var(--font-roboto)' }}>{label}</span>
+      <Icon className="w-6 h-6 md:w-5 md:h-5 shrink-0" />
+      <span className={`text-xs md:text-base font-medium hidden ${isFocusMode ? '' : 'md:block'} truncate`} style={{ fontFamily: 'var(--font-roboto)' }}>{label}</span>
     </button>
   );
 
@@ -109,9 +112,11 @@ export default function Dashboard() {
     <div className="h-screen flex flex-col md:flex-row bg-(--color-neutral) text-(--color-on-surface) overflow-hidden relative">
       
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-(--color-surface) border-r border-(--color-border) z-20 shadow-2xl">
-        <div className="p-6 border-b border-(--color-border)">
-          <h1 className="text-3xl text-(--color-primary) font-normal tracking-wide" style={{ fontFamily: 'var(--font-varela)' }}>Chronos</h1>
+      <aside className={`hidden md:flex flex-col fixed inset-y-0 left-0 bg-(--color-surface) border-r border-(--color-border) z-20 shadow-2xl transition-all duration-300 ${isFocusMode ? 'w-20' : 'w-64'}`}>
+        <div className={`p-6 border-b border-(--color-border) flex items-center ${isFocusMode ? 'justify-center px-0' : 'justify-start'}`}>
+          <h1 className={`text-(--color-primary) font-normal tracking-wide transition-all ${isFocusMode ? 'text-2xl' : 'text-3xl'}`} style={{ fontFamily: 'var(--font-varela)' }}>
+            {isFocusMode ? 'C' : 'Chronos'}
+          </h1>
         </div>
         
         <nav className="flex-1 p-4 flex flex-col gap-2">
@@ -122,21 +127,42 @@ export default function Dashboard() {
           <NavItem view="party" icon={Users} label="Party" />
         </nav>
         
-        <div className="p-4 border-t border-(--color-border)">
-          <NavItem view="settings" icon={Settings} label="Settings" />
+        <div className={`p-4 border-t border-(--color-border) flex items-center ${isFocusMode ? 'flex-col-reverse gap-4 px-2' : 'justify-between'}`}>
+          <div className="flex-1 w-full">
+            <NavItem view="settings" icon={Settings} label="Settings" />
+          </div>
+          <button
+            onClick={() => setIsFocusMode(!isFocusMode)}
+            className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isFocusMode ? 'bg-(--color-primary) text-white shadow-lg shadow-(--color-primary)/20' : 'ml-2 bg-(--color-surface-2) border border-(--color-border) text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60)'}`}
+            title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+          >
+            {isFocusMode ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+          </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 flex flex-col h-full relative">
+      <main className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isFocusMode ? 'md:ml-20' : 'md:ml-64'}`}>
         
         {/* Top Header */}
-        <header className="sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md p-4 md:px-8 border-b border-(--color-border) flex justify-between items-center">
-          <h2 className="text-xl md:text-2xl font-normal capitalize text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>
+        <header className={`sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md p-4 md:px-8 border-b border-(--color-border) flex justify-between items-center ${isFocusMode ? 'border-none bg-transparent' : ''}`}>
+          <h2 className={`text-xl md:text-2xl font-normal capitalize text-(--color-on-surface) transition-opacity ${isFocusMode ? 'opacity-0' : 'opacity-100'}`} style={{ fontFamily: 'var(--font-varela)' }}>
             {currentView === 'tasks' ? 'Quests Dashboard' : currentView}
           </h2>
           
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Search / Command Palette Button */}
+            {!isFocusMode && (
+              <button
+                onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+                className="hidden md:flex items-center gap-2 bg-(--color-surface-2) border border-(--color-border) py-2 px-3 rounded-xl text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
+                title="Search or jump to..."
+              >
+                <Search className="w-4 h-4" />
+                <span className="text-sm font-medium">Search...</span>
+                <span className="text-xs bg-(--color-neutral) px-1.5 py-0.5 rounded text-(--color-muted-text) font-mono border border-(--color-border)">âŒ˜K</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 const newTheme = theme === 'habitica-dark' ? 'classic-light' : 'habitica-dark';
@@ -171,7 +197,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Wrapper */}
-        <div className={`p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar ${activeTimers && activeTimers.length > 0 ? 'pb-[164px]' : 'pb-[100px]'} md:pb-8`}>
+        <div className="p-4 md:p-8 md:pb-0 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -212,13 +238,16 @@ export default function Dashboard() {
               {currentView === 'party' && <PartyView />}
               {currentView === 'profile' && <ProfileView />}
               {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
+              
+              {/* Bottom Spacer for scrolling past floating elements */}
+              <div className={`shrink-0 w-full ${activeTimers && activeTimers.length > 0 ? 'h-[164px]' : 'h-[100px]'} md:h-[25vh]`}></div>
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 py-1 pb-safe h-[60px] items-center">
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 py-1 pb-safe h-[60px] items-center ${isFocusMode ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} transition-all duration-300`}>
         <div className="flex w-[40%] justify-around">
           <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
           <NavItem view="timer" icon={Timer} label="Focus" />
@@ -318,6 +347,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
+      <CommandPalette />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { pwaInfo } from 'virtual:pwa-info';
 
 interface Props {
   title: string;
@@ -22,9 +23,24 @@ const { title } = Astro.props;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Varela+Round&display=swap" rel="stylesheet">
     
+    <link rel="apple-touch-icon" href="/Zen-Task/icon.jpg">
+    { pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} /> }
     <title>{title}</title>
   </head>
   <body class="bg-(--color-neutral) text-(--color-on-surface) min-h-screen">
     <slot />
+    <script>
+      import { registerSW } from 'virtual:pwa-register';
+
+      registerSW({
+        immediate: true,
+        onRegisteredSW(swScriptUrl, registration) {
+          console.log('SW registered: ', registration);
+        },
+        onRegisterError(error) {
+          console.log('SW registration error', error);
+        }
+      });
+    </script>
   </body>
 </html>
