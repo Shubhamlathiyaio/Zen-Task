@@ -7,6 +7,48 @@
       "skillPath": "skills/astro/SKILL.md",
       "computedHash": "3a70f9666e7b6a03efb939b7e62938f4d3a6a5d956b2cc3c10011fda6ba27e9b"
     },
+    "entrig-android": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-android/SKILL.md",
+      "computedHash": "7a6732384dfd13c9b85e28c00fd9c4fc70956bb64bd8dbc425e1a394216aa8d3"
+    },
+    "entrig-capacitor": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-capacitor/SKILL.md",
+      "computedHash": "5fc82e29fbde47bf9857149be14010fd7ecb69061f1f47ac9edbf7c763639d52"
+    },
+    "entrig-expo": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-expo/SKILL.md",
+      "computedHash": "4e31e808e945f12b8384231f49f885370b202147afc0c97c2016802604c2bf9a"
+    },
+    "entrig-flutter": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-flutter/SKILL.md",
+      "computedHash": "0fcc41222e5464f1606679de92f3c8e0a89459d1797b6a1d3cf0537872f96e10"
+    },
+    "entrig-ios": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-ios/SKILL.md",
+      "computedHash": "3f4c0193f1d338f76fbcf12de3493e5ac8b95dbf9ce17c37c4d2739f600af2a3"
+    },
+    "entrig-mcp": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-mcp/SKILL.md",
+      "computedHash": "8645052de8e94eb5910dc936183b8555ab5a634d30cb2d16d3cf3e36cc774ab3"
+    },
+    "entrig-react-native": {
+      "source": "entrig/entrig-skills",
+      "sourceType": "github",
+      "skillPath": "skills/entrig-react-native/SKILL.md",
+      "computedHash": "1377c98bb2d8a61ce37c8b716c8a5ca47ec68ea52746a09c08adaa12a17f291f"
+    },
     "tailwind-4-docs": {
       "source": "lombiq/tailwind-agent-skills",
       "sourceType": "github",

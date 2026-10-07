@@ -1,3 +1,9 @@
+## Session Notes
+
+Record important learnings from past conversations here so future sessions in this project can recall context. Keep concise and actionable.
+
+- (none yet)
+
 ## Development
 
 When starting the dev server, use background mode:

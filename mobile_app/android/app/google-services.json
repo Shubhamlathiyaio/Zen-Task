@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "116918202042",
+    "project_id": "zen-task-bc783",
+    "storage_bucket": "zen-task-bc783.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:116918202042:android:com.shubhamlathiyaio.zentask.zen_task_mobile",
+        "android_client_info": {
+          "package_name": "com.shubhamlathiyaio.zentask.zen_task_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUMMY-REPLACE_WITH_REAL_ANDROID_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
