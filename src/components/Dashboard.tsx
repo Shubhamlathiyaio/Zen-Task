@@ -115,7 +115,7 @@ export default function Dashboard() {
       <aside className={`hidden md:flex flex-col fixed inset-y-0 left-0 bg-(--color-surface) border-r border-(--color-border) z-20 shadow-2xl transition-all duration-300 ${isFocusMode ? 'w-20' : 'w-64'}`}>
         <div className={`p-6 border-b border-(--color-border) flex items-center ${isFocusMode ? 'justify-center px-0' : 'justify-start'}`}>
           <h1 className={`text-(--color-primary) font-normal tracking-wide transition-all ${isFocusMode ? 'text-2xl' : 'text-3xl'}`} style={{ fontFamily: 'var(--font-varela)' }}>
-            {isFocusMode ? 'C' : 'Chronos'}
+            {isFocusMode ? 'CF' : 'Chronos Focus'}
           </h1>
         </div>
         

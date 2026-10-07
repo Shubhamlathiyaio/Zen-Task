@@ -1,12 +1,12 @@
-# Zen Task — SEO Keyword Research (2026)
+# Chronos Focus — SEO Keyword Research (2026)
 
-Research date: Sep 2026. Market, competitor, and keyword notes for growing Zen Task organically.
+Research date: Sep 2026. Market, competitor, and keyword notes for growing Chronos Focus organically.
 
 ## Positioning Summary
 
 **The gap we exploit:** Competitors and roundup articles all say the same thing about Habitica
 (the 4M+ user market leader): *dated/cluttered UI, no focus timer, requires internet, $4.99/mo*.
-The new 2026 leader MainQuest wins on "modern + ADHD-friendly + free focus timer." Zen Task's
+The new 2026 leader MainQuest wins on "modern + ADHD-friendly + free focus timer." Chronos Focus's
 differentiators (beautiful dark theme, XP/rewards/levels, focus timer, parties, Eisenhower matrix,
 Flutter mobile app) directly answer these complaints.
 

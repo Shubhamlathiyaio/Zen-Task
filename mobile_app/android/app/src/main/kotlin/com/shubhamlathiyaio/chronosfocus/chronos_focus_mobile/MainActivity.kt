@@ -1,4 +1,4 @@
-package com.shubhamlathiyaio.zentask.zen_task_mobile
+package com.shubhamlathiyaio.chronosfocus.chronos_focus_mobile
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

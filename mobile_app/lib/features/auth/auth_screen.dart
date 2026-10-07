@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -73,7 +73,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const Icon(Icons.self_improvement, size: 80, color: Color(0xFF925CF3)),
               const SizedBox(height: 16),
               const Text(
-                'Zen Task',
+                'Chronos Focus',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),

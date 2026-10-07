@@ -53,7 +53,7 @@ export default function Auth() {
 
       <div className="bg-(--color-surface) p-8 rounded-2xl shadow-2xl max-w-md w-full border border-(--color-border) relative z-10">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl text-(--color-on-surface) mb-2 font-normal" style={{ fontFamily: 'var(--font-varela)' }}>Chronos</h1>
+          <h1 className="text-4xl text-(--color-on-surface) mb-2 font-normal" style={{ fontFamily: 'var(--font-varela)' }}>Chronos Focus</h1>
           <p className="text-(--color-muted-text)" style={{ fontFamily: 'var(--font-roboto)' }}>Welcome to the Dark Quest</p>
         </div>
         

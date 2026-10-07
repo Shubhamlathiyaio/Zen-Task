@@ -2,7 +2,7 @@
 
 Record important learnings from past conversations here so future sessions in this project can recall context. Keep concise and actionable.
 
-- (none yet)
+- App renamed to **Chronos Focus** (domain: cronosfocus.com, note spelling — no "h" in domain). Web: site/base in `astro.config.mjs` now `https://cronosfocus.com` + `/`, `public/CNAME` added, zustand persist key is `chronos-focus-storage`. Mobile bundle IDs now `com.shubhamlathiyaio.chronosfocus.*`, Dart package `chronos_focus_mobile`. Firebase project is still `zen-task-bc783` — google-services.json package_name was updated locally, so register the new Android app ID in the Firebase console and re-download google-services.json.
 
 ## Development
 

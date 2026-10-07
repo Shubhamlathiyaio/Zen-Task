@@ -43,12 +43,12 @@ void main() async {
     debugPrint('Supabase credentials missing. App will run in degraded mode.');
   }
 
-  runApp(ProviderScope(child: ZenTaskApp(hasSupabase: hasSupabase)));
+  runApp(ProviderScope(child: ChronosFocusApp(hasSupabase: hasSupabase)));
 }
 
-class ZenTaskApp extends ConsumerWidget {
+class ChronosFocusApp extends ConsumerWidget {
   final bool hasSupabase;
-  const ZenTaskApp({super.key, this.hasSupabase = false});
+  const ChronosFocusApp({super.key, this.hasSupabase = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,7 +64,7 @@ class ZenTaskApp extends ConsumerWidget {
     });
 
     return MaterialApp(
-      title: 'Zen Task',
+      title: 'Chronos Focus',
       theme: AppTheme.darkTheme,
       home: authStateAsync.when(
         data: (authState) {

@@ -1,6 +1,6 @@
 -- 0002_full_fresh_schema.sql
 -- This script properly drops ALL existing tables (including the party system) 
--- and recreates a unified, perfect schema for Zen Task.
+-- and recreates a unified, perfect schema for Chronos Focus.
 
 -- 1. DROP ALL EXISTING TABLES (The CASCADE ensures dependencies don't block this)
 DROP TABLE IF EXISTS coin_transfers CASCADE;

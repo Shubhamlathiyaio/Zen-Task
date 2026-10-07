@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:116918202042:android:com.shubhamlathiyaio.zentask.zen_task_mobile",
+        "mobilesdk_app_id": "1:116918202042:android:com.shubhamlathiyaio.chronosfocus.chronos_focus_mobile",
         "android_client_info": {
-          "package_name": "com.shubhamlathiyaio.zentask.zen_task_mobile"
+          "package_name": "com.shubhamlathiyaio.chronosfocus.chronos_focus_mobile"
         }
       },
       "oauth_client": [],

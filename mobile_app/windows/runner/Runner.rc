@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.shubhamlathiyaio.zentask" "\0"
-            VALUE "FileDescription", "zen_task_mobile" "\0"
+            VALUE "CompanyName", "com.shubhamlathiyaio.chronosfocus" "\0"
+            VALUE "FileDescription", "Chronos Focus" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "zen_task_mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.shubhamlathiyaio.zentask. All rights reserved." "\0"
-            VALUE "OriginalFilename", "zen_task_mobile.exe" "\0"
-            VALUE "ProductName", "zen_task_mobile" "\0"
+            VALUE "InternalName", "chronos_focus_mobile" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.shubhamlathiyaio.chronosfocus. All rights reserved." "\0"
+            VALUE "OriginalFilename", "chronos_focus_mobile.exe" "\0"
+            VALUE "ProductName", "Chronos Focus" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

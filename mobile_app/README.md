@@ -1,4 +1,4 @@
-# zen_task_mobile
+# chronos_focus_mobile
 
 A new Flutter project.
 

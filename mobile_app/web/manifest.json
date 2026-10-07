@@ -1,11 +1,11 @@
 {
-    "name": "zen_task_mobile",
-    "short_name": "zen_task_mobile",
+    "name": "Chronos Focus",
+    "short_name": "Chronos Focus",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Chronos Focus - Gamified Productivity Portal.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

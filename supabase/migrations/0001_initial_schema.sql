@@ -1,5 +1,5 @@
 -- 0001_initial_schema.sql
--- This script creates a fresh foundation for the Zen Task (Chronos) application.
+-- This script creates a fresh foundation for the Chronos Focus application.
 -- Please run this directly in your Supabase SQL Editor.
 
 -- WARNING: This will drop existing tables to give us a clean slate!

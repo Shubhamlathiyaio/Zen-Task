@@ -1185,7 +1185,7 @@ export const useStore = create<StoreState>()(
   }
     }),
     {
-      name: 'zen-task-storage',
+      name: 'chronos-focus-storage',
       merge: (persistedState: any, currentState) => {
         const merged = { ...currentState, ...persistedState };
         if (persistedState.customTags && Object.keys(persistedState.customTags).length === 0) {

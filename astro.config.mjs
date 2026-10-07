@@ -6,16 +6,16 @@ import AstroPWA from '@vite-pwa/astro';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://shubhamlathiyaio.github.io',
-  base: '/Zen-Task',
+  site: 'https://cronosfocus.com',
+  base: '/',
 
   integrations: [
     react(),
     AstroPWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Zen Task',
-        short_name: 'ZenTask',
+        name: 'Chronos Focus',
+        short_name: 'ChronosFocus',
         description: 'A playful gamified task manager.',
         theme_color: '#925CF3',
         background_color: '#121212',
@@ -30,7 +30,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: '/Zen-Task/',
+        navigateFallback: '/',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg}']
       }
     })
