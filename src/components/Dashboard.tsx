@@ -4,6 +4,7 @@ import Auth from './Auth';
 import ActionHub from './ActionHub';
 import EisenhowerMatrix from './EisenhowerMatrix';
 import TaskList from './TaskList';
+import KanbanBoard from './KanbanBoard';
 import FocusTimer from './FocusTimer';
 import StoreView from './StoreView';
 import PartyView from './PartyView';
@@ -82,7 +83,7 @@ export default function Dashboard() {
 
   if (isAuthLoading) {
     return (
-      <div className="h-screen w-full bg-(--color-neutral) flex flex-col items-center justify-center gap-4">
+      <div className="h-dvh w-full bg-(--color-neutral) flex flex-col items-center justify-center gap-4">
          <div className="w-16 h-16 border-4 border-(--color-primary-60) border-t-(--color-primary) rounded-full animate-spin"></div>
          <p className="text-(--color-primary-60) font-bold tracking-widest uppercase">Loading Realm...</p>
       </div>
@@ -96,7 +97,7 @@ export default function Dashboard() {
   const NavItem = ({ view, icon: Icon, label }: { view: any, icon: any, label: string }) => (
     <button
       onClick={() => setCurrentView(view)}
-      className={`flex flex-col md:flex-row items-center justify-center ${isFocusMode ? 'md:justify-center' : 'md:justify-start'} gap-1 md:gap-3 p-1.5 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
+      className={`flex flex-col md:flex-row items-center justify-center ${isFocusMode ? 'md:justify-center' : 'md:justify-start'} gap-1 md:gap-3 p-2 md:px-4 md:py-3 w-full rounded-xl transition-all border-none cursor-pointer ${
         currentView === view 
           ? 'bg-(--color-primary) text-white shadow-md shadow-(--color-primary)/20' 
           : 'bg-transparent text-(--color-muted-text) hover:bg-(--color-surface-2) hover:text-(--color-on-surface)'
@@ -109,7 +110,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-(--color-neutral) text-(--color-on-surface) overflow-hidden relative">
+    <div className="h-dvh flex flex-col md:flex-row bg-(--color-neutral) text-(--color-on-surface) overflow-hidden relative pb-16 md:pb-0">
       
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col fixed inset-y-0 left-0 bg-(--color-surface) border-r border-(--color-border) z-20 shadow-2xl transition-all duration-300 ${isFocusMode ? 'w-20' : 'w-64'}`}>
@@ -142,26 +143,35 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isFocusMode ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isFocusMode ? 'md:ml-20' : 'md:ml-64'} px-4 md:px-8 md:pb-0`}>
         
         {/* Top Header */}
-        <header className={`sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md p-4 md:px-8 border-b border-(--color-border) flex justify-between items-center ${isFocusMode ? 'border-none bg-transparent' : ''}`}>
-          <h2 className={`text-xl md:text-2xl font-normal capitalize text-(--color-on-surface) transition-opacity ${isFocusMode ? 'opacity-0' : 'opacity-100'}`} style={{ fontFamily: 'var(--font-varela)' }}>
+        <header className={`sticky top-0 z-10 bg-(--color-neutral)/80 backdrop-blur-md py-3 md:py-4 border-b border-(--color-border) flex justify-between items-center gap-2 ${isFocusMode ? 'border-none bg-transparent' : ''}`}>
+          <h2 className={`text-lg md:text-2xl font-normal capitalize text-(--color-on-surface) transition-opacity min-w-0 truncate pr-2 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`} style={{ fontFamily: 'var(--font-varela)' }}>
             {currentView === 'tasks' ? 'Quests Dashboard' : currentView}
           </h2>
           
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 shrink-0">
             {/* Search / Command Palette Button */}
             {!isFocusMode && (
-              <button
-                onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-                className="hidden md:flex items-center gap-2 bg-(--color-surface-2) border border-(--color-border) py-2 px-3 rounded-xl text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
-                title="Search or jump to..."
-              >
-                <Search className="w-4 h-4" />
-                <span className="text-sm font-medium">Search...</span>
-                <span className="text-xs bg-(--color-neutral) px-1.5 py-0.5 rounded text-(--color-muted-text) font-mono border border-(--color-border)">âŒ˜K</span>
-              </button>
+              <>
+                <button
+                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+                  className="hidden md:flex items-center gap-2 bg-(--color-surface-2) border border-(--color-border) py-2 px-3 rounded-xl text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
+                  title="Search or jump to..."
+                >
+                  <Search className="w-4 h-4" />
+                  <span className="text-sm font-medium">Search...</span>
+                  <span className="text-xs bg-(--color-neutral) px-1.5 py-0.5 rounded text-(--color-muted-text) font-mono border border-(--color-border)">⌘ K</span>
+                </button>
+                <button
+                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+                  className="md:hidden w-10 h-10 rounded-full bg-(--color-surface-2) border border-(--color-border) flex items-center justify-center text-(--color-muted-text) hover:text-(--color-on-surface) hover:border-(--color-primary-60) transition-all cursor-pointer"
+                  title="Search or jump to..."
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+              </>
             )}
             <button
               onClick={() => {
@@ -173,12 +183,12 @@ export default function Dashboard() {
             >
               {theme === 'habitica-dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-purple-500" />}
             </button>
-            <div className="flex items-center gap-2 md:gap-4 bg-(--color-surface-2) py-2 px-3 md:px-4 rounded-xl border border-(--color-border)">
+            <div className="flex items-center gap-2 bg-(--color-surface-2) py-2 px-2.5 md:px-4 rounded-xl border border-(--color-border)">
               <Coins className="text-(--color-reward) w-5 h-5" />
               <span className="font-bold text-(--color-reward) text-lg font-mono">{coinBalance}</span>
             </div>
             
-            <div className="flex items-center gap-2 bg-(--color-surface-2) py-2 px-3 rounded-xl border border-(--color-border)" title="Adventurers online right now">
+            <div className="hidden sm:flex items-center gap-2 bg-(--color-surface-2) py-2 px-3 rounded-xl border border-(--color-border)" title="Adventurers online right now">
               <span className="relative flex h-2.5 w-2.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -197,7 +207,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-4 md:p-8 md:pb-0 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="p-3 md:p-6 md:pb-0 flex-1 w-full max-w-6xl mx-auto overflow-y-auto overflow-x-hidden custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -221,6 +231,12 @@ export default function Dashboard() {
                         Matrix
                       </button>
                       <button 
+                        onClick={() => setTaskViewMode('kanban')}
+                        className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer outline-none focus:outline-none transition-colors ${taskViewMode === 'kanban' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
+                      >
+                        Kanban
+                      </button>
+                      <button 
                         onClick={() => setTaskViewMode('list')}
                         className={`px-4 py-2 rounded-md text-sm font-bold border-none cursor-pointer outline-none focus:outline-none transition-colors ${taskViewMode === 'list' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
                       >
@@ -228,7 +244,7 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
-                  {taskViewMode === 'matrix' ? <EisenhowerMatrix /> : <TaskList />}
+                  {taskViewMode === 'matrix' ? <EisenhowerMatrix /> : taskViewMode === 'kanban' ? <KanbanBoard /> : <TaskList />}
                 </div>
               )}
               
@@ -247,7 +263,7 @@ export default function Dashboard() {
       </main>
 
       {/* Mobile Bottom Bar */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-20 flex justify-between px-1 py-1 pb-safe h-[60px] items-center ${isFocusMode ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} transition-all duration-300`}>
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 bg-(--color-surface) border-t border-(--color-border) z-30 flex justify-between px-1 py-1 pb-safe h-[60px] items-center ${isFocusMode ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} transition-all duration-300`}>
         <div className="flex w-[40%] justify-around">
           <NavItem view="tasks" icon={LayoutDashboard} label="Quests" />
           <NavItem view="timer" icon={Timer} label="Focus" />
@@ -262,6 +278,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Fixed mobile bottom bar spacing for ActiveTimerBar */}
+      <div className="md:hidden h-[60px] w-full shrink-0"></div>
       <ActiveTimerBar />
       <ActionHub />
       {/* Notifications Toast */}

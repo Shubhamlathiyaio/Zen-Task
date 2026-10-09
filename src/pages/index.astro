@@ -4,5 +4,135 @@ import Dashboard from '../components/Dashboard.tsx';
 ---
 
 <Layout title="Chronos Focus">
-  <Dashboard client:only="react" />
+  <Fragment slot="head">
+    <script type="application/ld+json" is:inline>
+      [
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "ChronosFocus",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "Web, Android",
+          "url": "https://cronosfocus.com/",
+          "description": "A gamified focus and task management app featuring Pomodoro timers, habit tracking, the Eisenhower Matrix, and productivity rewards.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What makes a combined focus and task management app better?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Using a single productivity app prevents context switching. When your to-do list with a timer are in the same place, you spend less time managing your apps and more time actually completing your work."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is ChronosFocus a good ADHD task organizer?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes! Many users find traditional to-do lists overwhelming. By combining visual Kanban boards, the Eisenhower Matrix for clear prioritization, and a productivity timer for short bursts of focus, ChronosFocus provides structure and dopamine-driven rewards."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the gamified task management system work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Every time you complete a task, finish a Pomodoro session, or maintain a habit streak, you earn coins. You can use these coins to redeem custom rewards that you set for yourself."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use this as a simple daily task manager?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Absolutely. While ChronosFocus offers advanced features like time tracking, its core is a clean, intuitive daily task manager."
+              }
+            }
+          ]
+        }
+      ]
+    </script>
+  </Fragment>
+
+  <div class="flex flex-col min-h-screen">
+    <div class="flex-grow">
+      <Dashboard client:only="react" />
+    </div>
+    
+    <!-- SEO Content Section -->
+    <section class="bg-(--color-surface) text-(--color-on-surface-variant) py-16 px-6 mt-12 border-t border-opacity-10 border-white">
+      <div class="max-w-4xl mx-auto space-y-10 leading-relaxed">
+        
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-(--color-on-surface) mb-5">Master Your Time with the Ultimate Focus and Task Management App</h1>
+          <p class="mb-4">In today's fast-paced world, staying productive is harder than ever. You are constantly bombarded by distractions, shifting priorities, and endless notifications. If you are tired of switching between a scattered to-do list, a standalone habit tracker, and a separate timer, ChronosFocus is the solution you've been looking for.</p>
+          <p>Built as a comprehensive <strong>focus and task management app</strong>, ChronosFocus brings everything you need into one seamless, unified dashboard. It empowers you to organize your daily workflow, track your productive time, and build lasting habits. Whether you need a structured <strong>daily task manager</strong> to get through the workday or a dedicated <strong>ADHD task organizer</strong> to keep your brain engaged, ChronosFocus is designed to help you turn your ambitious plans into completed work.</p>
+        </div>
+
+        <div>
+          <h2 class="text-2xl font-semibold text-(--color-on-surface) mb-4">A Complete Task Management System Built for Deep Work</h2>
+          <p class="mb-5">Finding the <strong>best task management software</strong> means finding a tool that adapts to how you actually think, plan, and execute. ChronosFocus provides a highly flexible <strong>task management system</strong> that bridges the gap between planning and execution.</p>
+          
+          <h3 class="text-xl font-medium text-(--color-on-surface) mb-3">Organize Visually with Kanban Boards</h3>
+          <p class="mb-5">Stop feeling overwhelmed by endless, linear lists. With our built-in Kanban boards, you can visualize your entire workflow at a glance. Move your tasks seamlessly from "To Do" to "In Progress" and finally to "Done."</p>
+
+          <h3 class="text-xl font-medium text-(--color-on-surface) mb-3">Prioritize Smartly with the Eisenhower Matrix</h3>
+          <p>By categorizing your tasks by urgency and importance, you can instantly see what requires your immediate attention and what can be scheduled for later. This ensures you are always focusing your energy on high-impact work.</p>
+        </div>
+
+        <div>
+          <h2 class="text-2xl font-semibold text-(--color-on-surface) mb-4">Powerful Focus and Time Tracking</h2>
+          <h3 class="text-xl font-medium text-(--color-on-surface) mb-3">Built-in Pomodoro Timer and Time Blocking</h3>
+          <p>When it's time to buckle down, launch our built-in <strong>task timer app</strong>. Using scientifically proven methods like the <strong>Pomodoro timer</strong>, you can break your work into highly focused, manageable intervals. If you prefer to structure your entire schedule in advance, our <strong>time blocking app</strong> functionality allows you to allocate specific hours of your day to specific tasks.</p>
+        </div>
+
+        <div>
+          <h2 class="text-2xl font-semibold text-(--color-on-surface) mb-4">Build Habits, Keep Streaks, and Stay Consistent</h2>
+          <p>True, long-term productivity is built on consistency. ChronosFocus doubles as a powerful <strong>habit tracker</strong>, allowing you to set daily goals and maintain rewarding streaks. Watch your progress grow as you check off daily habits alongside your regular tasks. It is the ultimate <strong>productivity task tracker</strong> for building a better routine.</p>
+        </div>
+
+        <div>
+          <h2 class="text-2xl font-semibold text-(--color-on-surface) mb-4">Gamified Productivity: Earn Rewards for Your Work</h2>
+          <p>ChronosFocus introduces engaging gamification to your daily grind. By treating your life like an RPG, you can earn virtual coins and unlock rewards for completing tasks, hitting focus milestones, and maintaining your habit streaks. It's an incredibly effective <strong>focus app</strong> for anyone who struggles with procrastination.</p>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="mt-16 pt-10 border-t border-opacity-10 border-white">
+          <h2 class="text-2xl font-semibold text-(--color-on-surface) mb-8">Frequently Asked Questions</h2>
+          
+          <div class="space-y-8">
+            <div>
+              <h3 class="text-lg font-medium text-(--color-on-surface) mb-2">What makes a combined focus and task management app better?</h3>
+              <p>Using a single productivity app prevents context switching. When your <strong>to-do list with timer</strong> are in the same place, you spend less time managing your apps and more time actually completing your work.</p>
+            </div>
+            
+            <div>
+              <h3 class="text-lg font-medium text-(--color-on-surface) mb-2">Is ChronosFocus a good ADHD task organizer?</h3>
+              <p>Yes! Many users find traditional to-do lists overwhelming. By combining visual Kanban boards, the Eisenhower Matrix for clear prioritization, and a <strong>productivity timer</strong> for short bursts of focus, ChronosFocus provides the structure and dopamine-driven rewards needed to stay engaged.</p>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-medium text-(--color-on-surface) mb-2">How does the gamified task management system work?</h3>
+              <p>Every time you complete a task, finish a Pomodoro session, or maintain a habit streak, you earn coins. You can use these coins to redeem custom rewards that you set for yourself, turning your daily chores into a rewarding game.</p>
+            </div>
+            
+            <div>
+              <h3 class="text-lg font-medium text-(--color-on-surface) mb-2">Can I use this as a simple daily task manager?</h3>
+              <p>Absolutely. While ChronosFocus offers advanced features like time tracking and gamification, its core is a clean, intuitive daily task manager. You can use as many or as few features as you need to build your perfect workflow.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
 </Layout>

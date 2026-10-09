@@ -254,9 +254,9 @@ export default function TaskList() {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-(--color-surface) rounded-xl p-6 shadow-xl border border-(--color-border)"
+      className="bg-(--color-surface) rounded-xl p-4 md:p-6 shadow-xl border border-(--color-border)"
     >
-      <h3 className="text-2xl mb-6 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>All Quests (Priority Sorted)</h3>
+      <h3 className="text-xl md:text-2xl mb-4 md:mb-6 font-normal text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>All Quests (Priority Sorted)</h3>
       
       <DndContext 
         sensors={sensors}

@@ -102,36 +102,36 @@ export default function FocusTimer() {
         )}
       </div>
 
-      <div className="bg-(--color-surface) rounded-2xl p-8 border border-(--color-border) shadow-xl flex flex-col items-center justify-center min-h-[400px] relative overflow-hidden">
+      <div className="bg-(--color-surface) rounded-2xl p-4 sm:p-6 md:p-8 border border-(--color-border) shadow-xl flex flex-col items-center justify-center min-h-[340px] md:min-h-[400px] relative overflow-hidden">
         
         {/* Animated Background Pulse when running */}
         {timerIsRunning && (
           <div className="absolute inset-0 bg-(--color-primary)/5 animate-pulse -z-10 pointer-events-none"></div>
         )}
         
-        <div className="flex gap-2 mb-8 bg-(--color-neutral) p-2 rounded-xl border border-(--color-border)">
+        <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6 md:mb-8 bg-(--color-neutral) p-2 rounded-xl border border-(--color-border)">
           <button 
             onClick={() => handleModeChange('work')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'work' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'work' ? 'bg-(--color-primary) text-white' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
           >
             <Brain className="w-4 h-4" /> Focus
           </button>
           <button 
             onClick={() => handleModeChange('shortBreak')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'shortBreak' ? 'bg-blue-500/20 text-blue-400' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'shortBreak' ? 'bg-blue-500/20 text-blue-400' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
           >
             <Coffee className="w-4 h-4" /> Short Break
           </button>
           <button 
             onClick={() => handleModeChange('longBreak')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'longBreak' ? 'bg-green-500/20 text-green-400' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors border-none ${timerMode === 'longBreak' ? 'bg-green-500/20 text-green-400' : 'bg-transparent text-(--color-muted-text) hover:text-(--color-on-surface)'}`}
           >
             <Coffee className="w-4 h-4" /> Long Break
           </button>
         </div>
 
         <div className="relative">
-          <svg className="w-64 h-64 md:w-80 md:h-80 transform -rotate-90" viewBox="0 0 100 100">
+          <svg className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
               cy="50"
@@ -153,7 +153,7 @@ export default function FocusTimer() {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl md:text-7xl font-bold text-(--color-on-surface) font-mono tracking-tight drop-shadow-md">
+            <span className="text-5xl sm:text-6xl md:text-7xl font-bold text-(--color-on-surface) font-mono tracking-tight drop-shadow-md">
               {formatTime(timerTimeLeft)}
             </span>
             <span className="text-(--color-muted-text) mt-2 uppercase tracking-widest text-sm font-bold text-center px-4">
@@ -162,10 +162,10 @@ export default function FocusTimer() {
           </div>
         </div>
 
-        <div className="flex gap-6 mt-10">
+        <div className="flex gap-4 sm:gap-6 mt-8 md:mt-10">
           <button
             onClick={resetTimer}
-            className="w-16 h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
             title="Reset timer"
           >
             <RotateCcw className="w-6 h-6" />
@@ -173,7 +173,7 @@ export default function FocusTimer() {
 
           <button
             onClick={toggleTimer}
-            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 border-none ${
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 border-none ${
               timerIsRunning 
                 ? 'bg-(--color-surface-2) text-(--color-on-surface) hover:bg-white/10' 
                 : 'bg-(--color-primary) text-white hover:bg-(--color-primary-80)'
@@ -185,7 +185,7 @@ export default function FocusTimer() {
           
           <button
             onClick={handleSkip}
-            className="w-16 h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center bg-(--color-surface-2) text-(--color-muted-text) hover:bg-white/10 hover:text-(--color-on-surface) transition-colors cursor-pointer border-none"
             title="Skip to next phase"
           >
             <SkipForward className="w-6 h-6" />
@@ -193,7 +193,7 @@ export default function FocusTimer() {
         </div>
       </div>
 
-      <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-md">
+      <div className="bg-(--color-surface) rounded-2xl p-4 md:p-6 border border-(--color-border) shadow-md">
         <h3 className="text-lg font-bold text-(--color-on-surface) mb-4 flex items-center gap-2">
           <Volume2 className="text-(--color-primary-60)" /> Ambient Soundscapes
         </h3>
@@ -229,7 +229,7 @@ export default function FocusTimer() {
         </div>
       </div>
       {/* Timer Settings Section */}
-      <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-md">
+      <div className="bg-(--color-surface) rounded-2xl p-4 md:p-6 border border-(--color-border) shadow-md">
         <h3 className="text-lg font-bold text-(--color-on-surface) mb-4 flex items-center gap-2">
           <Timer className="text-(--color-primary-60) w-5 h-5" /> Timer Configuration
         </h3>

@@ -43,18 +43,18 @@ export default function HistoryView() {
         <div className="bg-(--color-primary-60)/20 p-3 rounded-xl border border-(--color-primary-60)/30">
           <History className="w-6 h-6 text-(--color-primary-60)" />
         </div>
-        <h1 className="text-3xl font-bold text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold text-(--color-on-surface)" style={{ fontFamily: 'var(--font-varela)' }}>
           Chronicles
         </h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
+        <div className="bg-(--color-surface) rounded-2xl p-4 md:p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
           <Coins className="w-8 h-8 text-amber-500 mb-2" />
           <p className="text-(--color-muted-text) text-sm font-bold uppercase tracking-widest mb-1">Total Spoils</p>
           <p className="text-4xl font-black text-(--color-on-surface) font-mono">{totalCoinsEarned}</p>
         </div>
-        <div className="bg-(--color-surface) rounded-2xl p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
+        <div className="bg-(--color-surface) rounded-2xl p-4 md:p-6 border border-(--color-border) shadow-xl flex flex-col justify-center items-center text-center">
           <Target className="w-8 h-8 text-(--color-primary-60) mb-2" />
           <p className="text-(--color-muted-text) text-sm font-bold uppercase tracking-widest mb-1">Actions Completed</p>
           <p className="text-4xl font-black text-(--color-on-surface) font-mono">{filteredHistory.length}</p>

@@ -182,6 +182,38 @@ function QuadrantContainer({
   id: QuadrantType, title: string, tasks: { task: Task, deadlineMs: number }[], isActiveMobile: boolean, onClick: () => void 
 }) {
   const { setNodeRef } = useDroppable({ id });
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const { addTask, user, isGuest } = useStore();
+
+  const handleAddTask = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newTaskTitle.trim()) {
+      const tempId = Math.random().toString(36).substring(2, 11);
+      const newTask = {
+        id: isGuest ? tempId : undefined,
+        user_id: user?.id || 'guest',
+        title: newTaskTitle.trim(),
+        quadrant: id,
+        reward_amount: 10, // Default reward
+        is_required: false,
+        status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        tags: []
+      };
+
+      if (isGuest) {
+        addTask(newTask as any);
+      } else {
+        // Optimistic update can be added if needed, but here we wait for DB
+        const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
+        if (data && !error) {
+          addTask(data);
+        } else if (error) {
+          console.error("Error adding task:", error);
+        }
+      }
+      setNewTaskTitle('');
+    }
+  };
   
   return (
     <div 
@@ -209,6 +241,18 @@ function QuadrantContainer({
       </div>
       
       <div className={`flex flex-col gap-3 flex-1 min-h-[50px] md:min-h-[150px] ${!isActiveMobile ? 'hidden md:flex' : 'flex'}`}>
+        <div className="mb-2">
+          <input
+            type="text"
+            placeholder="Add a task... (Press Enter)"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={handleAddTask}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-(--color-surface) text-(--color-on-surface) text-sm px-3 py-2 rounded border border-(--color-border) focus:outline-none focus:border-(--color-primary) transition-colors"
+          />
+        </div>
+        
         <SortableContext id={id} items={tasks.map(t => t.task.id)} strategy={verticalListSortingStrategy}>
           <AnimatePresence>
             {tasks.map(({ task, deadlineMs }) => (

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 export type QuadrantType = 'q1_urgent_important' | 'q2_not_urgent_important' | 'q3_urgent_not_important' | 'q4_not_urgent_not_important';
 export type ViewType = 'tasks' | 'timer' | 'store' | 'party' | 'settings' | 'profile' | 'history';
-export type TaskViewMode = 'matrix' | 'list';
+export type TaskViewMode = 'matrix' | 'list' | 'kanban';
 export type HabitType = 'flexible' | 'timed';
 export type HabitFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -17,7 +17,7 @@ export interface Task {
   quadrant: QuadrantType;
   reward_amount: number;
   is_required: boolean;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'todo' | 'inprocess' | 'in_review' | 'done';
   created_at: string;
   completed_at?: string | null;
   due_date?: string | null;
@@ -225,7 +225,7 @@ interface StoreState {
   addHabit: (habit: Habit) => void;
   addReward: (reward: Reward) => void;
   deleteReward: (rewardId: string) => Promise<void>;
-  updateTaskStatus: (taskId: string, status: 'completed' | 'failed') => void;
+  updateTaskStatus: (taskId: string, status: 'pending' | 'completed' | 'failed' | 'todo' | 'inprocess' | 'in_review' | 'done') => void;
   updateHabitStatus: (habitId: string) => void;
   deleteTask: (taskId: string) => void;
   deleteHabit: (habitId: string) => void;
@@ -526,7 +526,7 @@ export const useStore = create<StoreState>()(
     if (state.tasks && state.tasks.length > 0) {
       state.tasks.forEach(task => {
         // 1. Recurring task respawn check
-        if (task.status === 'completed' && task.frequency && task.frequency !== 'none' && task.completed_at) {
+        if ((task.status === 'completed' || task.status === 'done') && task.frequency && task.frequency !== 'none' && task.completed_at) {
           let intervalMs = 0;
           switch (task.frequency) {
             case 'daily': intervalMs = 24 * 60 * 60 * 1000; break;
@@ -540,7 +540,7 @@ export const useStore = create<StoreState>()(
         }
         
         // 2. Penalty check for pending tasks
-        if (task.status !== 'pending') return;
+        if (task.status === 'completed' || task.status === 'done' || task.status === 'failed') return;
         const rule = state.quadrantRules[task.quadrant];
         if (!rule || rule.deadline === 'none') return;
         
@@ -763,7 +763,9 @@ export const useStore = create<StoreState>()(
     if (!task) return;
 
     let extraCoins = 0;
-    if (status === 'completed') {
+    const isCompleted = status === 'completed' || status === 'done';
+    
+    if (isCompleted) {
       const activeTimer = state.activeTimers.find(t => t.refId === taskId && t.type === 'task');
       if (activeTimer) {
         const minutes = Math.floor(activeTimer.elapsed / 60);
@@ -775,10 +777,10 @@ export const useStore = create<StoreState>()(
     // Optimistic update
     const completedAtStr = new Date().toISOString();
     set((state) => ({
-      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status, completed_at: status === 'completed' ? completedAtStr : undefined } : t)
+      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status, completed_at: isCompleted ? completedAtStr : undefined } : t)
     }));
 
-    if (status === 'completed') {
+    if (isCompleted) {
       const totalReward = task.reward_amount + (task.pending_coins || 0) + extraCoins;
       const newBalance = state.coinBalance + totalReward;
       set({ coinBalance: newBalance });
@@ -804,15 +806,15 @@ export const useStore = create<StoreState>()(
 
       // Check for pending challenges to complete transfers
       const { pendingTransfers } = get();
-      const challengeTransfer = pendingTransfers.find(pt => pt.challenge_task_id === taskId && pt.status === 'Pending' && pt.receiver_id === user.id);
+      const challengeTransfer = pendingTransfers.find(pt => pt.challenge_task_id === taskId && pt.status === 'Pending' && pt.receiver_id === state.user?.id);
       
-      if (challengeTransfer) {
+      if (challengeTransfer && state.user) {
         // Complete the transfer
         supabase.from('coin_transfers').update({ status: 'Completed' }).eq('id', challengeTransfer.id).then(() => {
           // Add funds to the receiver
           const finalBalance = newBalance + challengeTransfer.amount;
           set({ coinBalance: finalBalance });
-          supabase.from('profiles').update({ coin_balance: finalBalance }).eq('id', user.id).then();
+          supabase.from('profiles').update({ coin_balance: finalBalance }).eq('id', state.user.id).then();
         });
       }
 

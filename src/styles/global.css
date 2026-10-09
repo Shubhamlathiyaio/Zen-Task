@@ -33,6 +33,11 @@ body {
   color-scheme: dark;
 }
 
+/* iOS home-indicator safe area for the fixed bottom nav */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
+}
+
 /* Custom Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;

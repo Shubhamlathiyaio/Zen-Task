@@ -65,7 +65,7 @@ export default function ActiveTimerBar() {
 
   return (
     <div className="fixed bottom-[60px] md:bottom-6 left-0 md:left-64 right-0 z-40 transition-all duration-300 flex justify-center pointer-events-none">
-      <div className="bg-(--color-surface) text-(--color-on-surface) shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:rounded-xl relative border-t md:border border-(--color-border) flex items-center h-16 w-full md:w-auto md:min-w-[400px] md:max-w-[calc(100vw-18rem)] pointer-events-auto">
+      <div className="bg-(--color-surface) text-(--color-on-surface) shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:rounded-xl relative border-t md:border border-(--color-border) flex items-center h-16 w-full md:w-auto md:min-w-[400px] md:max-w-[calc(100vw-18rem)] pointer-events-auto px-2 sm:px-4">
         
         {/* Timer Carousel */}
         <div 

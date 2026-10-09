@@ -46,12 +46,12 @@ export default function Auth() {
   if (user) return null;
 
   return (
-    <div className="flex justify-center items-center h-screen w-full relative overflow-hidden">
+    <div className="flex justify-center items-center min-h-dvh w-full relative overflow-hidden p-4">
       {/* Background decoration */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-(--color-primary)/20 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
 
-      <div className="bg-(--color-surface) p-8 rounded-2xl shadow-2xl max-w-md w-full border border-(--color-border) relative z-10">
+      <div className="bg-(--color-surface) p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-(--color-border) relative z-10">
         <div className="mb-8 text-center">
           <h1 className="text-4xl text-(--color-on-surface) mb-2 font-normal" style={{ fontFamily: 'var(--font-varela)' }}>Chronos Focus</h1>
           <p className="text-(--color-muted-text)" style={{ fontFamily: 'var(--font-roboto)' }}>Welcome to the Dark Quest</p>

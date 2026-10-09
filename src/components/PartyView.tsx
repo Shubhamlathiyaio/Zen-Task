@@ -73,7 +73,7 @@ export default function PartyView() {
         
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 className="text-3xl font-normal mb-2 text-(--color-on-surface) flex items-center gap-3" style={{ fontFamily: 'var(--font-varela)' }}>
+            <h2 className="text-2xl sm:text-3xl font-normal mb-2 text-(--color-on-surface) flex items-center gap-3" style={{ fontFamily: 'var(--font-varela)' }}>
               <Users className="text-(--color-primary-60) w-8 h-8" /> 
               {activeParty.name}
             </h2>
@@ -81,13 +81,13 @@ export default function PartyView() {
           </div>
         </div>
         
-        <div className="bg-(--color-neutral) rounded-xl overflow-hidden border border-(--color-border)">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-(--color-neutral) rounded-xl overflow-x-auto border border-(--color-border)">
+          <table className="w-full min-w-[420px] text-left border-collapse">
             <thead>
               <tr className="bg-(--color-surface-2) border-b border-(--color-border)">
-                <th className="p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider">Adventurer</th>
-                <th className="p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider text-right">Wealth</th>
-                <th className="p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider text-right">Actions</th>
+                <th className="p-2.5 sm:p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider">Adventurer</th>
+                <th className="p-2.5 sm:p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider text-right">Wealth</th>
+                <th className="p-2.5 sm:p-4 text-(--color-muted-text) font-bold uppercase text-xs tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -96,23 +96,23 @@ export default function PartyView() {
                     key={member.id} 
                     className={`border-b border-(--color-border) hover:bg-white/5 transition-colors ${member.user_id === user?.id ? 'bg-(--color-primary)/10' : ''}`}
                   >
-                    <td className="p-4">
+                    <td className="p-2.5 sm:p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-(--color-surface-2) flex items-center justify-center text-sm font-bold border border-(--color-border) overflow-hidden shrink-0">
                           <img src={`https://api.dicebear.com/7.x/${member.user_id === user?.id ? avatarStyle : 'adventurer'}/svg?seed=${member.user_id === user?.id && avatarSeed ? avatarSeed : member.user_id}`} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
-                        <span className={`font-medium ${member.user_id === user?.id ? 'text-(--color-primary-60) font-bold' : 'text-(--color-on-surface)'}`}>
+                        <span className={`font-medium truncate max-w-[120px] sm:max-w-none ${member.user_id === user?.id ? 'text-(--color-primary-60) font-bold' : 'text-(--color-on-surface)'}`}>
                           {member.profiles?.username} {member.user_id === user?.id && '(You)'}
                         </span>
                       </div>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-2.5 sm:p-4 text-right">
                       <div className="flex items-center justify-end gap-2 bg-(--color-surface) px-3 py-1 rounded-full border border-(--color-border) w-fit ml-auto">
                         <span className={`font-bold font-mono ${(member.profiles?.coin_balance || 0) < 50 ? 'text-red-400' : 'text-(--color-reward)'}`}>{member.profiles?.coin_balance || 0}</span>
                         <Coins className="text-(--color-reward) w-4 h-4" />
                       </div>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-2.5 sm:p-4 text-right">
                       {member.user_id !== user?.id && (
                         <div className="flex justify-end gap-2">
                           <button onClick={() => sendGift(member.user_id, 50)} className="bg-[#FFD700]/20 text-[#FFD700] hover:bg-[#FFD700]/30 p-2 rounded-lg transition-colors cursor-pointer" title="Send 50 Solar Gold Gift">
